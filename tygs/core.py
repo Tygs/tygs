@@ -22,12 +22,16 @@ Depends on klein.
 
 from __future__ import absolute_import, unicode_literals, print_function
 
-
+import json
 import inspect
 
 from twisted.internet.defer import inlineCallbacks
 from klein import Klein
 
+from tygs.utils import do_nothing
+
+class TygsResponseError(object):
+    pass
 
 class TygsRequest(object):
     """ Proxy to the Twisted request object exposing the API to read the request.
@@ -37,10 +41,27 @@ class TygsRequest(object):
         the end user life easier.
     """
 
-    def __init__(self, werkzeug_request, *args, **kwargs):
-        self.werkzeug_request = werkzeug_request
+    def __init__(self, twisted_request, *args, **kwargs):
+        self.twisted_request = twisted_request
         self.url_args = args
         self.url_kwargs = kwargs
+
+
+def text_renderer(response):
+    """ Just send pure text.
+
+        Only call write on request data.
+    """
+    return response.data
+
+
+def json_renderer(response):
+    """ Send data as JSON.
+
+        Set headers, serialize request data and write it.
+    """
+    response.headers['Content-Type'] = 'application/json'
+    return json.dumps(response.data)
 
 
 class TygsResponse(object):
@@ -55,10 +76,59 @@ class TygsResponse(object):
         the end user life easier.
     """
 
+    renderers = {
+        "text": text_renderer,
+        "json": json_renderer,
+    }
+
     def __init__(self, request):
         self.request = request
-        self._req = self.request.werkzeug_request
-        self.write = self._req.write
+        self._req = self.request.twisted_request
+        self.headers = {}
+        self.renderer = 'text'
+        self.data = None
+
+    def text(self, data):
+        if self.data:
+            self.data += data
+        else:
+            self.data = data
+        self.renderer = 'text'
+
+    def json(self, data):
+        if self.data:
+            self.data.update(data)
+        else:
+            self.data = data
+        self.renderer = 'json'
+
+    def write(self, *args, **kwargs):
+        self.render = do_nothing
+        self.text = self._no_rendering
+        self.json = self._no_rendering
+        return self._req.write(*args, **kwargs)
+
+    def _no_rendering(response):
+        """ Raise an exception if you try to render.
+        """
+        error = "The response is already been sent, you can't render it now."
+        TygsResponseError(error)
+
+
+    def render(self):
+        try:
+            renderer = self.renderers[self.renderer]
+        except KeyError:
+            error = "Unknow response renderers '%s'" % self.renderer
+            raise TygsResponseError(error)
+
+        body = renderer(self)
+        for key, val in self.headers.items():
+            self._req.setHeader(key.encode('utf8'), val.encode('utf8'))
+
+        self._req.write(body)
+
+    # todo: write() disable all rendering
 
 
 class App(object):
@@ -74,24 +144,29 @@ class App(object):
             a response objects and no params as they will be request attributes.
             This wrapper transforms the parameters into the new signature.
         """
-
         # Usual wrapper to create decorator with parameters.
         def decorator(func):
-
+            f = func
             # This is the wrapper called for ALL endpoints. It create the
             # request and response objects and then call the end user
             # endpoint with these as parameters instead of only one request
             # object.
-            def handle_request(app, request, *xargs, **xkwargs):
+            def handle_request(request, *xargs, **xkwargs):
                 req = TygsRequest(request, *args, **kwargs)
                 res = TygsResponse(req)
 
                 # if we see yield in the function, assume we want to inline
                 # them as defer callbacks
-                if inspect.isgeneratorfunction(func):
-                    return inlineCallbacks(func)(req, res)
-                else:
-                    return func(req, res)
+                if inspect.isgeneratorfunction(f):
+                    d =  inlineCallbacks(f)(req, res)
+                    # TODO : better way to do this ?
+                    d.addCallback(lambda x :res.render())
+                    return d
+
+                d =  f(req, res)
+                res.render()
+
+            handle_request.__name__ = b'handle_with__' + func.__name__
 
             # Bind the route to the handle_request endpoint which will call
             # the end user endpoint anyway.
