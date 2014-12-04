@@ -15,63 +15,89 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-"""Support for Bootle application style.
+"""Support for Bottle application style (see: http://bottlepy.com)
 
-http://bottlepy.com
-
-For more information see the bottle demo:
-https://github.com/fiorix/cyclone/tree/master/demos/bottle
+Depends on klein.
 """
 
 from __future__ import absolute_import, unicode_literals, print_function
 
-import cyclone.web
-import sys
 
-from twisted.python import log
-from twisted.internet import reactor
+import inspect
+
+from twisted.internet.defer import inlineCallbacks
+from klein import Klein
+
+
+class TygsRequest(object):
+    """ Proxy to the Twisted request object exposing the API to read the request.
+
+        Most of the attributes are alias or wrapper arounds the underlying
+        request object attributes. Some are added utility methods to make
+        the end user life easier.
+    """
+
+    def __init__(self, werkzeug_request, *args, **kwargs):
+        self.werkzeug_request = werkzeug_request
+        self.url_args = args
+        self.url_kwargs = kwargs
+
+
+class TygsResponse(object):
+    """ Proxy to the Twisted request object exposing the API to send a response.
+
+        In the Twisted API, you build the response from the request object. We
+        want to create facade to make the separation between request and
+        response more obvious.
+
+        Most of the attributes are alias or wrapper arounds the underlying
+        request object attributes. Some are added utility methods to make
+        the end user life easier.
+    """
+
+    def __init__(self, request):
+        self.request = request
+        self._req = self.request.werkzeug_request
+        self.write = self._req.write
 
 
 class App(object):
 
-    handlers = {}
+    def __init__(self):
+        self.klein = Klein()
 
-    def route(self, path=None, method="any", **kwargs):
+    def route(self, url, *args, **kwargs):
+        """ Wrapper around Klein's routing to expose the Res/Req API to enpoints.
 
-        def decorator(callback):
-            name = method.lower()
+            Klein's routing assume an endpoint accepting only a request object
+            and URL parameters. The new signature for endpoints is a request and
+            a response objects and no params as they will be request attributes.
+            This wrapper transforms the parameters into the new signature.
+        """
 
-            # Bottle lets users specify method="ANY" in order to catch any
-            # route.
-            name = 'default' if name == 'any' else name
+        # Usual wrapper to create decorator with parameters.
+        def decorator(func):
 
-            if path not in self.handlers:
-                self.handlers[path] = Router()
+            # This is the wrapper called for ALL endpoints. It create the
+            # request and response objects and then call the end user
+            # endpoint with these as parameters instead of only one request
+            # object.
+            def handle_request(app, request, *xargs, **xkwargs):
+                req = TygsRequest(request, *args, **kwargs)
+                res = TygsResponse(req)
 
-            handler = self.handlers[path]
-            handler.add(name, callback)
+                # if we see yield in the function, assume we want to inline
+                # them as defer callbacks
+                if inspect.isgeneratorfunction(func):
+                    return inlineCallbacks(func)(req, res)
+                else:
+                    return func(req, res)
 
-            return callback
+            # Bind the route to the handle_request endpoint which will call
+            # the end user endpoint anyway.
+            return self.klein.route(url, *args, **kwargs)(handle_request)
 
         return decorator
 
-    def run(self, **settings):
-        port = settings.get("port", 8888)
-        interface = settings.get("host", "0.0.0.0")
-        log.startLogging(settings.pop("log", sys.stdout))
-        reactor.listenTCP(port, cyclone.web.Application(self.handlers.items(),
-                          **settings),
-                          interface=interface)
-        reactor.run()
-
-
-class Router:
-    def __init__(self):
-        self.handler = type(b'CustomRequestHandler',
-                            (cyclone.web.RequestHandler,), {})
-
-    def add(self, method, callback):
-        setattr(self.handler, method, callback)
-
-    def __call__(self, *args, **kwargs):
-        return self.handler(*args, **kwargs)
+    def run(self):
+        self.klein.run("localhost", 8080)

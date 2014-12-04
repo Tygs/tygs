@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
 from tygs import App
 
 app = App()
 
-
 @app.route("/")
-# @app.route('/', method='get')
-def index(handler):
-    handler.write("Hello, world")
+def index(req, res):
+    res.write("Hello, world")
 
 app.run()
