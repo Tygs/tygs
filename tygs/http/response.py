@@ -7,10 +7,11 @@
 from __future__ import absolute_import, unicode_literals
 
 import json
+import encodings
 
-from tygs.utils import do_nothing
+from tygs.utils import do_nothing, TygsError, raise_on_unsupported_encoding
 
-class HTTPResponseError(object):
+class HTTPResponseError(TygsError):
     pass
 
 def html_renderer(response):
@@ -52,27 +53,78 @@ class HTTPResponse(object):
         self.request = request
         self._req = self.request.twisted_request
         self.headers = {}
-        self.renderer = 'html'
-        self.data = None
-        self.encoding = 'utf8'
+        self._renderer = 'html'
+        self.data = ''
+        self._encoding = 'utf8'
 
-    def html(self, data, encoding=None):
-        """ Set next rendering of this response as HTML """
-        if self.data:
-            self.data += data
+    @property
+    def encoding(self):
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, value):
+        raise_on_unsupported_encoding(value)
+        self._encoding = value
+
+    @property
+    def renderer(self):
+        return self._renderer
+
+    @renderer.setter
+    def renderer(self, value):
+        if value not in self.renderers:
+            msg = ("'%s' is not a supported encoding. "
+                   "Check 'self.renderers' for supported renderers.")
+            raise HTTPResponseError(msg % value)
+        self._renderer = value
+
+
+    def html(self, data, encoding=None, replace=False):
+        """ Set next rendering of this response as HTML
+
+            If previous data existed in the response, and replace is False,
+            an attempt to merge the new data with it by concatenation will be
+            made before falling back on replacement.
+        """
+        # Todo : check that data is a unicode string. We'll need future
+        if data and not replace:
+            try:
+                self.data += data
+            except TypeError:
+                self.data = data
         else:
             self.data = data
         self.encoding = encoding or self.encoding
         self.renderer = 'html'
 
-    def json(self, data, encoding=None):
-        """ Set next rendering of this response as JSON """
-        if self.data:
-            self.data.update(data)
+    def json(self, data, encoding=None, replace=False):
+        """ Set next rendering of this response as JSON
+
+            If previous data existed in the response, and replace is False,
+            an attempt to merge the new data with it by update() will be
+            made before falling back on replacement.
+        """
+        if data and not replace:
+            try:
+                self.data.update(data)
+            except (AttributeError, ValueError):
+                self.data = data
         else:
             self.data = data
         self.encoding = encoding or self.encoding
         self.renderer = 'json'
+
+    def _disable_rendering(self):
+        """ Disable rendering then make write() an alias of request writting """
+        self.render = do_nothing
+        self.html = self._no_rendering
+        self.json = self._no_rendering
+
+    def _set_twisted_headers(self):
+        """ Copy the headers to the twisted request object """
+        for key, val in self.headers.items():
+            self._req.setHeader(key.encode(self.encoding),
+                                val.encode(self.encoding))
 
     def write(self, *args, **kwargs):
         """ Directly write data to the client.
@@ -80,18 +132,18 @@ class HTTPResponse(object):
             You probably don't want to use it directly, but if you do, you
             won't be able to use other rendering methods after it.
         """
-        # disable rendering then make write() a direct alias of request writting
-        self.render = do_nothing
-        self.html = self._no_rendering
-        self.json = self._no_rendering
+        self._disable_rendering()
+        self._set_twisted_headers()
+        res = self._req.write(*args, **kwargs)
+        # if we call write again, it will do a direct write to the client
         self.write = self._req.write
-        return self._req.write(*args, **kwargs)
+        return res
 
     def _no_rendering(response):
         """ Used to raise an exception if you try to render.
         """
         error = "The response is already been sent, you can't render it now."
-        HTTPResponseError(error)
+        raise HTTPResponseError(error)
 
 
     def render(self):
@@ -105,10 +157,5 @@ class HTTPResponse(object):
         except KeyError:
             error = "Unknow response renderers '%s'" % self.renderer
             raise HTTPResponseError(error)
-
         body = renderer(self)
-        for key, val in self.headers.items():
-            self._req.setHeader(key.encode(self.encoding),
-                                val.encode(self.encoding))
-
-        self._req.write(body)
+        self.write(body)
