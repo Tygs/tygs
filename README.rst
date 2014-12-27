@@ -11,3 +11,49 @@ Tygs wants to be a Pure Python Web framework providing a sweet API for :
 - multiprocessing to bypass the GIL and still play nice and easy with the above.
 
 For now it's nothing, since the project just started. No promises.
+
+Version : 2.7 due to twisted as a depency. They are currently migrating to 3.
+
+Licence : for now BSD. May change.
+
+Install
+--------
+
+It is not pushed on pypi yet::
+
+    python setup.py install
+
+Developement
+-------------
+
+Install for dev::
+
+    python setup.py develop
+
+Deactivate dev mode:
+
+    python setup.py develop --uninstall
+
+Running all tests::
+
+    python setup.py test
+
+This can take long has it will setup the whole test env with tox, a virtualenv, etc.
+
+You can install test dependancies manually::
+
+    pip install pytest-cov, mock, tox
+
+And run the tests manually::
+
+    # in all envs
+    tox
+    # in only the current env
+    py.test tests
+
+After that, you can run tests covergage this way::
+
+    # cmd only coverage
+    py.test --cov tygs tests
+    # dump an HTML report in htmlcov dir
+    py.test  --cov-report html --cov tygs tests

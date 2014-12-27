@@ -19,7 +19,7 @@ class Tox(TestCommand):
         #import here, cause outside the eggs aren't loaded
         import tox
         import shlex
-        errno = tox.cmdline(args=shlex.split(self.tox_args))
+        errno = tox.cmdline(args=shlex.split(self.tox_args or ""))
         sys.exit(errno)
 
 
@@ -36,6 +36,9 @@ setup(
     keywords="python, asynchronous, web",
     include_package_data=True,
     install_requires=['klein'],
+    extra_requires={
+        'testing': ['tox', 'pytest-cov', 'mock'],
+    },
     tests_require=['tox'],
     cmdclass = {'test': Tox},
     classifiers=[
