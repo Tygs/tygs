@@ -1,11 +1,31 @@
 
+import sys
 
 from setuptools import setup
+from setuptools.command.test import test as TestCommand
+
+
+class Tox(TestCommand):
+    """ Wrapper to run tox when calling python setup.py test """
+    user_options = [('tox-args=', 'a', "Arguments to pass to tox")]
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.tox_args = None
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+    def run_tests(self):
+        #import here, cause outside the eggs aren't loaded
+        import tox
+        import shlex
+        errno = tox.cmdline(args=shlex.split(self.tox_args))
+        sys.exit(errno)
 
 
 setup(
     name='Tygs',
-    version='0.1',
+    version="0.1.0",
     author='Sam et Max',
     author_email='lesametlemax@gmail.com',
     py_modules=['tygs'],
@@ -16,6 +36,8 @@ setup(
     keywords="python, asynchronous, web",
     include_package_data=True,
     install_requires=['klein'],
+    tests_require=['tox'],
+    cmdclass = {'test': Tox},
     classifiers=[
         'Intended Audience :: Developers',
         'Programming Language :: Python',
