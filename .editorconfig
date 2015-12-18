@@ -10,5 +10,5 @@ insert_final_newline = true
 [*.py]
 indent_size = 4
 
-[*.{html,js,rb,scss,xml,less,css}]
+[*.{html,js,xml,css}]
 indent_size = 2

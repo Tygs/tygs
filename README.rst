@@ -5,16 +5,22 @@ Tygs wants to be a Pure Python Web framework providing a sweet API for :
 
 - easy asynchronous HTTP;
 - PUB/SUB between your code on: server/server, server-client, client-client;
-- PUB/SUB between your code on: server/server, server-client, client-client;
+- RPC between your code on: server/server, server-client, client-client;
 - easy task queues;
 - in memory key/value store for caching and more;
 - multiprocessing to bypass the GIL and still play nice and easy with the above.
 
 For now it's nothing, since the project just started. No promises.
 
-Version : 2.7 due to twisted as a depency. They are currently migrating to 3.
+Depandancies:
 
-Licence : for now BSD. May change.
+- Python 3.5+ (uses async/await);
+- 'aiohttp
+- jinja2
+- aiohttp-jinja2',
+- path.py
+
+Licence: WTFPL
 
 Install
 --------
@@ -29,6 +35,10 @@ Developement
 Install for dev::
 
     python setup.py develop
+
+Style Guide :
+ - Python: PEP8 (https://www.python.org/dev/peps/pep-0008/)
+ - JS: Google (http://google-styleguide.googlecode.com/svn/trunk/javascriptguide.xml)
 
 Deactivate dev mode:
 
