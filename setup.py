@@ -13,12 +13,13 @@ setuptools.setup(name='tygs',
                  install_requires=['aiohttp', 'jinja2', 'aiohttp-jinja2',
                                    'path.py'],
                  extras_require={
-                     'dev': ['sphinx', 'tox', 'pytest', 'requests', 'pytest-cov']
+                     'dev': ['sphinx', 'tox', 'pytest', 'requests',
+                             'pytest-cov']
                  },
                  include_package_data=True,
                  license='WTFPL',
                  zip_safe=False,
-                 keywords='sublimepost blogging microblogging async',
+                 keywords='tygs async rpc pubsub http websocket',
                  classifiers=['Development Status :: 1 - Planning',
                               'Intended Audience :: Developers',
                               'Natural Language :: English',
