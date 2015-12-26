@@ -1,2 +1,2 @@
-from app import App
-from webapp import WebApp
+
+from .webapp import WebApp

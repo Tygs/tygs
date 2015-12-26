@@ -10,8 +10,8 @@ setuptools.setup(name='tygs',
                  url='https://github.com/sametmax/tygs/',
                  packages=setuptools.find_packages('src'),
                  package_dir={'': 'src'},
-                 install_requires=['aiohttp', 'jinja2', 'aiohttp-jinja2',
-                                   'path.py'],
+                 install_requires=['aiohttp', 'jinja2', 
+                                   'path.py', 'werkzeug'],
                  extras_require={
                      'dev': ['sphinx', 'tox', 'pytest', 'requests',
                              'pytest-cov']
