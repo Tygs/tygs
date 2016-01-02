@@ -19,21 +19,43 @@ class Component:
         self.app = app
 
 
+class SignalDispatcher:
+
+    def __init__(self):
+        self.signals = {}
+
+    def register(self, event, handler):
+        self.signals.setdefault(event, []).append(handler)
+
+    def trigger(self, event):
+        [asyncio.ensure_future(h()) for h in self.signals.get(event, [])]
+
+    def on(self, event):
+
+        def decorator(func):
+            self.register(event, func)
+            return func
+        return decorator
+
+
 # TODO: make that a generic template renderer componnent
 class Jinja2Renderer(Component):
 
     def __init__(self, app):
         super().__init__(app)
-        # TODO: make that configuratble
-        template_dir = app.project_dir / "templates"
-        file_loader = jinja2.FileSystemLoader(template_dir)
-        self.env = jinja2.Environment(loader=file_loader)
+
+        @app.on('ready')
+        async def lazy_init():
+            # TODO: make that configuratble
+            template_dir = app.project_dir / "templates"
+            file_loader = jinja2.FileSystemLoader(template_dir)
+            self.env = jinja2.Environment(loader=file_loader,
+                                          autoescape=True)
 
     def render(self, template, context):
         # TODO : handle template not found
         template = self.env.get_template(template)
         return template.render(context)
-
 
 
 class HttpComponent(Component):
@@ -53,11 +75,9 @@ class HttpComponent(Component):
 
 class AioHttpRequestHandlerAdapter(RequestHandler):
 
-
     def __init__(self, *args, tygs_app, **kwargs):
         super().__init__(*args, **kwargs)
         self.tygs_app = tygs_app
-
 
     async def handle_request(self, message, payload):
         if self.access_log:
