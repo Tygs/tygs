@@ -1,7 +1,5 @@
-import sys
-import os
 
-from path import Path
+import tygs
 
 from .components import SignalDispatcher
 
@@ -21,6 +19,6 @@ class App:
 
     def ready(self, cwd=None):
         if cwd is None:
-            cwd = (Path(os.getcwd()) / sys.argv[0]).realpath().parent
+            cwd = tygs.utils.get_project_dir()
         self.project_dir = cwd
         self.trigger('ready')
