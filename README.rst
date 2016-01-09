@@ -15,9 +15,9 @@ For now it's nothing, since the project just started. No promises.
 Depandancies:
 
 - Python 3.5+ (uses async/await);
-- 'aiohttp
+- aiohttp
 - jinja2
-- aiohttp-jinja2',
+- aiohttp-jinja2,
 - path.py
 
 Licence: WTFPL

@@ -22,7 +22,8 @@ class WebApp(App):
             handler_factory=factory_adapter(self)
         )
 
-    def ready(self):
+    def ready(self, cwd=None):
+        super().ready(cwd)
         self.http_server = Server(self)
         self.http_server.run()
         # TODO: start the aiohttp server, for now
