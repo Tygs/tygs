@@ -1,7 +1,4 @@
 
-from collections import namedtuple
-from functools import partial
-
 import asyncio
 
 from aiohttp.web_reqrep import Response
@@ -105,6 +102,7 @@ class Server:
         self.server = None
 
     def get_server(self):
+        print('get server')
         return self.loop.run_until_complete(self._server_factory)
 
     def _run_server(self):

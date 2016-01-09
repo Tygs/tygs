@@ -12,8 +12,8 @@ class App:
 
         cwd = Path(os.getcwd())
         # TODO: make this configurable
+        print("CWD", os.getcwd())
         self.project_dir = (cwd / sys.argv[0]).realpath().parent
-
 
     def ready():
         pass

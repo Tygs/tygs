@@ -66,3 +66,6 @@ target/
 twistd.hostname
 runtests
 htmlcov
+
+# editors
+*.sublime*

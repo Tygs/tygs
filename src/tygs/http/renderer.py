@@ -22,4 +22,3 @@ def template_renderer(response):
         headers=response.headers,
         body=body
     )
-
