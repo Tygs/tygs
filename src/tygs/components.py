@@ -1,14 +1,12 @@
 
+import asyncio
+
 from functools import partial
 
 import jinja2
-import asyncio
 
-from aiohttp.abc import AbstractRouter, AbstractMatchInfo
-from aiohttp.web_urldispatcher import Route
 from aiohttp.web_reqrep import Request
 from aiohttp.web import RequestHandlerFactory, RequestHandler
-from aiohttp.web_exceptions import HTTPException
 
 from .http.server import HttpRequest, Router
 
@@ -96,31 +94,31 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         self._meth = aiothttp_request.method
         self._path = aiothttp_request.path
 
-        try:
+    # try:
 
-            #############
-            handler, arguments = await self._router.get_handler(tygs_request)
-            tygs_request.url_params.update(arguments)
-            ############
+        #############
+        handler, arguments = await self._router.get_handler(tygs_request)
+        tygs_request.url_params.update(arguments)
+        ############
 
-            ####################
-            # TODO: find out what do to with 100-continue message
-            # expect = request.headers.get(hdrs.EXPECT)
-            # if expect and expect.lower() == "100-continue":
-            #     resp = (
-            #         yield from match_info.route.handle_expect_header(request))
-            # if resp is None:
-            #    # TODO: add middlewares
-            ############
+        ####################
+        # TODO: find out what do to with 100-continue message
+        # expect = request.headers.get(hdrs.EXPECT)
+        # if expect and expect.lower() == "100-continue":
+        #     co = match_info.route.handle_expect_header(request)
+        #     resp = await co
+        # if resp is None:
+        #    # TODO: add middlewares
+        ############
 
-            ###############
+        ###############
 
-            await handler(tygs_request, tygs_request.response)
+        await handler(tygs_request, tygs_request.response)
 
-            ###############
+        ###############
 
-        except HTTPException as exc:
-            resp = exc
+    # except HTTPException as exc:
+    #     resp = exc
 
         aiohttp_reponse = tygs_request.response._build_aiohttp_reponse()
         resp_msg = await aiohttp_reponse.prepare(aiothttp_request)
