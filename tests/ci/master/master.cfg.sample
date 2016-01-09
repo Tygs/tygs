@@ -1,34 +1,7 @@
 # -*- python -*-
 # ex: set syntax=python:
-import tempfile
-from os import environ
-import re
-
-from path import tempdir, Path
 
 from buildbot.plugins import *
-from buildbot.process.properties import WithProperties
-from buildbot.steps.shell import ShellCommand
-
-REPOURL = 'git://github.com/tygs/tygs.git'
-TEMPDIR = tempdir('tygs-ci')
-MASTERDIR = Path(__file__).realpath().parent
-VENV = TEMPDIR / 'venv'
-BINDIR = VENV / 'bin'
-
-COVERAGEDIR = MASTERDIR / "public_html" / "coverage"
-
-COVERAGEREPORTDIR = COVERAGEDIR / "build-tygs-%(buildnumber)s"
-TEMPCOVERAGEDIR = TEMPDIR / "htmlcov"
-PYTHON = str(BINDIR / 'python')
-DOCDIR = str(TEMPDIR / 'doc')
-PIP = [PYTHON, '-m', 'pip']
-# TEMPDIR = str(TEMPDIR)
-VENV = str(VENV)
-
-# ensure coverage reports dir exists
-COVERAGEDIR.mkdir_p()
-
 
 # This is a sample buildmaster config file. It must be installed as
 # 'master.cfg' in your buildmaster's base directory.
@@ -59,9 +32,9 @@ c['protocols'] = {'pb': {'port': 9989}}
 
 c['change_source'] = []
 c['change_source'].append(changes.GitPoller(
-        REPOURL,
-        workdir=str(TEMPDIR), branch='master',
-        pollinterval=30))
+        'git://github.com/buildbot/pyflakes.git',
+        workdir='gitpoller-workdir', branch='master',
+        pollinterval=300))
 
 ####### SCHEDULERS
 
@@ -86,42 +59,9 @@ c['schedulers'].append(schedulers.ForceScheduler(
 
 factory = util.BuildFactory()
 # check out the source
-factory.addStep(steps.Git(repourl=REPOURL, mode='incremental',
-                          workdir=str(TEMPDIR)))
+factory.addStep(steps.Git(repourl='git://github.com/buildbot/pyflakes.git', mode='incremental'))
 # run the tests (note that this will require that 'trial' is installed)
-factory.addStep(steps.ShellCommand(command=[environ.get('PYTHON_EXECUTABLE',
-                                                        'python3.5'),
-                                            "-m", "venv", VENV]))
-factory.addStep(steps.ShellCommand(command=PIP + ["install", '-r',
-                                   str(TEMPDIR / 'requirements.txt')]))
-factory.addStep(steps.ShellCommand(command=PIP + ["install",
-                                   str(TEMPDIR)+'[dev]']))
-factory.addStep(steps.ShellCommand(command=[str(BINDIR / "sphinx-build"),
-                                            "-b", "html", "source", "build"],
-                                   workdir=DOCDIR))
-
-class RunTox(ShellCommand):
-    def __init__(self):
-        ShellCommand.__init__(self, command=[str(BINDIR / "tox")],
-                                    workdir=str(TEMPDIR))
-    def createSummary(self, log):
-        ShellCommand.createSummary(self, log)
-        build_number = self.getProperty('buildnumber')
-        url = "/coverage/build-tygs-%s/" % build_number
-        d = str(TEMPCOVERAGEDIR / "index.html") % {"buildnumber": build_number}
-        with open(d) as f:
-            m = re.search(r'<span class="pc_cov">(\d+)%</span>', f.read())
-
-        self.addURL("coverage %s%%" % m.group(1), url)
-
-factory.addStep(RunTox())
-
-factory.addStep(steps.DirectoryUpload(slavesrc=str(TEMPCOVERAGEDIR),
-                                      masterdest=WithProperties(str(COVERAGEREPORTDIR))))
-
-factory.addStep(steps.ShellCommand(command=PIP+["uninstall", "-y",
-                                                "tygs"]))
-factory.addStep(steps.RemoveDirectory(dir=str(TEMPDIR)))
+factory.addStep(steps.ShellCommand(command=["trial", "pyflakes"]))
 
 c['builders'] = []
 c['builders'].append(
@@ -143,9 +83,9 @@ from buildbot.status.web import authz, auth
 authz_cfg=authz.Authz(
     # change any of these to True to enable; see the manual for more
     # options
-    # auth=auth.BasicAuth([("pyflakes","pyflakes")]),
+    auth=auth.BasicAuth([("pyflakes","pyflakes")]),
     gracefulShutdown = False,
-    forceBuild = True, # use this to test your slave once it is set up
+    forceBuild = 'auth', # use this to test your slave once it is set up
     forceAllBuilds = 'auth',  # ..or this
     pingBuilder = False,
     stopBuild = False,
@@ -154,15 +94,14 @@ authz_cfg=authz.Authz(
 )
 c['status'].append(html.WebStatus(http_port=8010, authz=authz_cfg))
 
-
 ####### PROJECT IDENTITY
 
 # the 'title' string will appear at the top of this buildbot
 # installation's html.WebStatus home page (linked to the
 # 'titleURL') and is embedded in the title of the waterfall HTML page.
 
-c['title'] = "Tygs"
-c['titleURL'] = "https://github.com/tygs/tygs"
+c['title'] = "Pyflakes"
+c['titleURL'] = "https://launchpad.net/pyflakes"
 
 # the 'buildbotURL' string should point to the location where the buildbot's
 # internal web server (usually the html.WebStatus page) is visible. This
