@@ -44,3 +44,4 @@ def test_ready(app):
     with patch('tygs.utils.get_project_dir'):
         app.ready()
         assert isinstance(app.project_dir, Mock)
+
