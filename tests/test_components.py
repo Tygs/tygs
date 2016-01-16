@@ -42,3 +42,14 @@ async def test_signal_dispatcher():
     handler.assert_called_once_with()
     handler3.assert_called_once_with()
     assert handler2.call_count == 0
+
+
+def test_signal_dispatcher_decorator():
+    s = components.SignalDispatcher()
+    s.register = MagicMock()
+
+    handler = AsyncMock()
+
+    handler = s.on('event')(handler)
+
+    s.register.assert_called_once_with('event', handler)
