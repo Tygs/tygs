@@ -23,6 +23,7 @@ class SignalDispatcher:
         self.signals = {}
 
     def register(self, event, handler):
+        # TODO: check if handler is a coroutine, convert it otherwise
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):
@@ -40,16 +41,16 @@ class SignalDispatcher:
 # TODO: make that a generic template renderer componnent
 class Jinja2Renderer(Component):
 
+    async def lazy_init(self):
+        # TODO: make that configurable
+        template_dir = self.app.project_dir / "templates"
+        file_loader = jinja2.FileSystemLoader(template_dir)
+        self.env = jinja2.Environment(loader=file_loader,
+                                      autoescape=True)
+
     def __init__(self, app):
         super().__init__(app)
-
-        @app.on('ready')
-        async def lazy_init():
-            # TODO: make that configuratble
-            template_dir = app.project_dir / "templates"
-            file_loader = jinja2.FileSystemLoader(template_dir)
-            self.env = jinja2.Environment(loader=file_loader,
-                                          autoescape=True)
+        app.on('init')(self.lazy_init)
 
     def render(self, template, context):
         # TODO : handle template not found
