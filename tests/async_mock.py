@@ -1,7 +1,14 @@
+import asyncio
 from unittest.mock import Mock
 
 
 class AsyncMock(Mock):
 
-    async def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
+    def __call__(self, *args, **kwargs):
+        call = super().__call__(*args, **kwargs)
+        async def coro(*args, **kwargs):
+            return call
+        return asyncio.ensure_future(coro())
+
+    async def __await__(self, *args, **kwargs):
+        return self.__call__(*args, **kwargs)
