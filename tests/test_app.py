@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch, Mock
 
 from tygs.app import App
 from tygs.components import SignalDispatcher
+from .async_mock import AsyncMock
 
 
 @pytest.fixture
@@ -35,13 +36,17 @@ def test_event_wrappers(app):
     app.components['signals'].trigger.assert_called_once_with('event')
 
 
-def test_ready(app):
+@pytest.mark.asyncio
+async def test_ready(app):
 
+    app.setup_lifecycle = AsyncMock()
     app.ready('project_dir')
-    app.components['signals'].trigger.assert_called_once_with('ready')
+    app.setup_lifecycle.assert_called_once_with()
     assert app.project_dir == "project_dir"
 
+
+@pytest.mark.asyncio
+async def test_ready_cwd(app):
     with patch('tygs.utils.get_project_dir'):
         app.ready()
         assert isinstance(app.project_dir, Mock)
-

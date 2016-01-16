@@ -46,20 +46,24 @@ def test_quickstart(app):
     assert http is app.components['http']
 
 
-def test_ready(app):
+@pytest.mark.asyncio
+async def test_ready(app):
 
     with patch("tygs.http.server.Server"):
         app.ready('project_dir')
 
-        app.http_server.run.assert_called_once_with()
+        @app.on('ready')
+        def func():
+            app.http_server.run.assert_called_once_with()
 
-        app.http_server = MagicMock(app.http_server)
-        app.components['signals'].trigger.assert_called_once_with('ready')
-        assert app.project_dir == "project_dir"
+            app.http_server = MagicMock(app.http_server)
+            app.components['signals'].trigger.assert_called_once_with('init')
+            assert app.project_dir == "project_dir"
+
+
+@pytest.mark.asyncio
+async def test_ready_project_dir(app):
 
         with patch('tygs.utils.get_project_dir'):
             app.ready()
             assert isinstance(app.project_dir, Mock)
-
-
-
