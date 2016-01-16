@@ -26,7 +26,8 @@ class SignalDispatcher:
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):
-        [asyncio.ensure_future(h()) for h in self.signals.get(event, [])]
+        return [asyncio.ensure_future(h()) for h in
+                self.signals.get(event, [])]
 
     def on(self, event):
 
