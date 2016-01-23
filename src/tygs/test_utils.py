@@ -2,8 +2,6 @@
 
 import asyncio
 
-import pytest
-
 from unittest.mock import Mock
 
 
@@ -18,14 +16,5 @@ class AsyncMock(Mock):
 
     def __await__(self):
         task = asyncio.ensure_future(self())
-        pending_tasks.append(task)
+        self.pending_tasks.append(task)
         return task
-
-
-
-# @pytest.yield_fixture
-# def async_mock():
-
-#     yield AsyncMock
-#     for task in AsyncMock.pending_tasks:
-#         task.cancel()

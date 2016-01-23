@@ -1,14 +1,14 @@
-
 import pytest
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from tygs.app import App
 from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
 
 
-from .fixtures import app
+from . import fixtures
+
+app = fixtures.app
 
 
 def test_basic_api(app):

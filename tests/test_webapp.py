@@ -1,6 +1,5 @@
 
 import pytest
-import asyncio
 
 from unittest.mock import MagicMock, patch
 
@@ -10,8 +9,9 @@ from tygs.test_utils import AsyncMock
 from tygs.webapp import WebApp
 from tygs.components import SignalDispatcher, HttpComponent, Jinja2Renderer
 
-from .fixtures import webapp
+from . import fixtures
 
+webapp = fixtures.webapp
 
 
 def test_basic_api(webapp):
@@ -63,10 +63,9 @@ async def test_ready(webapp):
             assert webapp.project_dir == "project_dir"
             ensure_ready()
 
-        futures = await webapp.ready('project_dir')
+        await webapp.ready('project_dir')
         await webapp.stop()
         ensure_ready.assert_called_once_with()
-
 
 
 @pytest.mark.asyncio
