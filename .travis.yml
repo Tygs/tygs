@@ -9,7 +9,7 @@ python:
 env:
  - TOX_ENV=py35
  - TOX_ENV=flake8
- - TOX_ENV=coverage
+ - TOX_ENV=coverage-no-report
  - TOX_ENV=doc
 install:
  - pip install tox coveralls

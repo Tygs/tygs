@@ -1,3 +1,3 @@
 def test_import():
-    import tygs
-    from tygs import WebApp
+    import tygs  # noqa
+    from tygs import WebApp  # noqa
