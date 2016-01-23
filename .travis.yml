@@ -12,7 +12,7 @@ env:
  - TOX_ENV=coverage-no-report
  - TOX_ENV=doc
 install:
- - pip install tox coveralls
+ - pip install tox
 script:
  - tox -e $TOX_ENV
 
