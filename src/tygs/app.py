@@ -1,8 +1,7 @@
 import asyncio
 
-import tygs
-
 from .components import SignalDispatcher
+from .utils import get_project_dir
 
 
 class App:
@@ -28,7 +27,7 @@ class App:
 
     def ready(self, cwd=None):
         if cwd is None:
-            cwd = tygs.utils.get_project_dir()
+            cwd = get_project_dir()
         self.project_dir = cwd
         asyncio.ensure_future(self.setup_lifecycle())
         loop = asyncio.get_event_loop()

@@ -49,7 +49,7 @@ def test_quickstart(app):
 @pytest.mark.asyncio
 async def test_ready(app):
 
-    with patch("tygs.http.server.Server"):
+    with patch("tygs.webapp.Server"):
         app.ready('project_dir')
 
         @app.on('ready')
@@ -64,6 +64,7 @@ async def test_ready(app):
 @pytest.mark.asyncio
 async def test_ready_project_dir(app):
 
-        with patch('tygs.utils.get_project_dir'):
+        with patch('tygs.app.get_project_dir'):
             app.ready()
-            assert isinstance(app.project_dir, Mock)
+            from tygs.app import get_project_dir
+            get_project_dir.assert_called_once_with()

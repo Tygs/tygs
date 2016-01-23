@@ -47,6 +47,7 @@ async def test_ready(app):
 
 @pytest.mark.asyncio
 async def test_ready_cwd(app):
-    with patch('tygs.utils.get_project_dir'):
+    with patch('tygs.app.get_project_dir'):
         app.ready()
-        assert isinstance(app.project_dir, Mock)
+        from tygs.app import get_project_dir
+        get_project_dir.assert_called_once_with()
