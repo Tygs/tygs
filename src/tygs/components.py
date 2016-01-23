@@ -1,4 +1,5 @@
 
+import inspect
 import asyncio
 
 from functools import partial
@@ -16,22 +17,41 @@ class Component:
     def __init__(self, app):
         self.app = app
 
+    def prepare(self):
+        pass
 
-class SignalDispatcher:
 
-    def __init__(self):
+class SignalDispatcher(Component):
+
+    def __init__(self, app):
+        super().__init__(app)
         self.signals = {}
 
     def register(self, event, handler):
+        if not inspect.isawaitable(handler):
+
+            if not callable(handler):
+                raise TypeError("handler must be an awaitable or a callable. "
+                                "Did you try to call a non coroutine "
+                                "by mistake?")
+
+            # If a coroutine function is passed instead of a coroutine, call it
+            # so everything is a coroutine.
+            if inspect.iscoroutinefunction(handler):
+                handler = handler()
+
+            # If a normal function is passed, wrap it as a coroutine.
+            else:
+                handler = asyncio.coroutine(handler)()
+
         # TODO: check if handler is a coroutine, convert it otherwise
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):
-        return [asyncio.ensure_future(h()) for h in
+        return [asyncio.ensure_future(h) for h in
                 self.signals.get(event, [])]
 
     def on(self, event):
-
         def decorator(func):
             self.register(event, func)
             return func
@@ -48,9 +68,8 @@ class Jinja2Renderer(Component):
         self.env = jinja2.Environment(loader=file_loader,
                                       autoescape=True)
 
-    def __init__(self, app):
-        super().__init__(app)
-        app.on('init')(self.lazy_init)
+    def prepare(self):
+        self.app.register('init', self.lazy_init)
 
     def render(self, template, context):
         # TODO : handle template not found
@@ -146,4 +165,5 @@ def aiohttp_request_handler_factory_adapter_factory(app):
             super().__init__(*args, **kwargs)
             self._handler = partial(AioHttpRequestHandlerAdapter, tygs_app=app)
             self._router = app.components['http'].router
+            self._loop = asyncio.get_event_loop()
     return AioHttpRequestHandlerFactoryAdapter

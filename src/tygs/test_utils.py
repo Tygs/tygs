@@ -1,11 +1,20 @@
+
+
 import asyncio
+
 from unittest.mock import Mock
 
 
 class AsyncMock(Mock):
 
+    pending_tasks = []
+
     def __call__(self, *args, **kwargs):
-        call = super().__call__(*args, **kwargs)
-        async def coro(*args, **kwargs):
-            return call
-        return asyncio.ensure_future(coro())
+        async def coro():
+            super(AsyncMock, self).__call__(*args, **kwargs)
+        return coro()
+
+    def __await__(self):
+        task = asyncio.ensure_future(self())
+        self.pending_tasks.append(task)
+        return task

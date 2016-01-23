@@ -1,20 +1,14 @@
-
 import pytest
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from tygs.app import App
 from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
 
 
-@pytest.fixture
-def app():
+from . import fixtures
 
-    app = App("namespace")
-    signal_mock = MagicMock(app.components['signals'])
-    app.components['signals'] = signal_mock
-    return app
+app = fixtures.app
 
 
 def test_basic_api(app):
@@ -26,7 +20,7 @@ def test_basic_api(app):
 def test_event_wrappers(app):
 
     @app.on('event')
-    def toto():
+    def toto():  # pragma: no cover
         pass
 
     app.components['signals'].on.assert_called_once_with('event')
@@ -40,7 +34,7 @@ def test_event_wrappers(app):
 async def test_ready(app):
 
     app.setup_lifecycle = AsyncMock()
-    app.ready('project_dir')
+    await app.ready('project_dir')
     app.setup_lifecycle.assert_called_once_with()
     assert app.project_dir == "project_dir"
 

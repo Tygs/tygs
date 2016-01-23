@@ -7,6 +7,8 @@ import jinja2
 from tygs import components, app
 from tygs.test_utils import AsyncMock
 
+from tygs.app import App
+
 
 def test_component():
     c = components.Component('bla')
@@ -15,12 +17,16 @@ def test_component():
 
 @pytest.mark.asyncio
 async def test_signal_dispatcher():
-    s = components.SignalDispatcher()
+    s = components.SignalDispatcher(App('test'))
     assert s.signals == {}
 
-    handler = AsyncMock()
-    handler2 = AsyncMock()
-    handler3 = AsyncMock()
+    amock = AsyncMock()
+    amock2 = AsyncMock()
+    amock3 = AsyncMock()
+
+    handler = amock()
+    handler2 = amock2()
+    handler3 = amock3()
 
     s.register('wololo', handler)
 
@@ -31,6 +37,7 @@ async def test_signal_dispatcher():
     assert len(s.signals) == 2
     assert handler2 in s.signals['event']
 
+    # Using the same name add an handler to the list of handlers for this event
     s.register('wololo', handler3)
 
     assert len(s.signals) == 2
@@ -40,20 +47,19 @@ async def test_signal_dispatcher():
 
     await asyncio.gather(*s.trigger('wololo'))
 
-    handler.assert_called_once_with()
-    handler3.assert_called_once_with()
-    assert handler2.call_count == 0
+    amock.assert_called_once_with()
+    amock3.assert_called_once_with()
+    assert amock2.call_count == 0
 
 
 def test_signal_dispatcher_decorator():
-    s = components.SignalDispatcher()
+    s = components.SignalDispatcher(App('test'))
     s.register = MagicMock()
 
-    handler = AsyncMock()
+    mock = AsyncMock()
+    mock = s.on('event')(mock)
 
-    handler = s.on('event')(handler)
-
-    s.register.assert_called_once_with('event', handler)
+    s.register.assert_called_once_with('event', mock)
 
 
 @pytest.mark.asyncio
