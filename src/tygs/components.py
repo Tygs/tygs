@@ -165,4 +165,5 @@ def aiohttp_request_handler_factory_adapter_factory(app):
             super().__init__(*args, **kwargs)
             self._handler = partial(AioHttpRequestHandlerAdapter, tygs_app=app)
             self._router = app.components['http'].router
+            self._loop = asyncio.get_event_loop()
     return AioHttpRequestHandlerFactoryAdapter
