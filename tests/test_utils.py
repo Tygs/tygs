@@ -19,6 +19,3 @@ async def test_async_mock():
     m = AsyncMock()
     await m('test')
     m.assert_called_once_with('test')
-
-
-

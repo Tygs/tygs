@@ -1,7 +1,7 @@
 
 import pytest
 
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, patch
 
 from aiohttp.web import Application
 
