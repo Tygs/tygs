@@ -1,6 +1,11 @@
 Tygs
 ====
 
+.. image:: https://travis-ci.org/Tygs/tygs.svg?branch=master
+    :target: https://travis-ci.org/Tygs/tygs
+.. image:: https://coveralls.io/repos/github/Tygs/tygs/badge.svg?branch=master
+    :target: https://coveralls.io/github/Tygs/tygs?branch=master
+
 Tygs wants to be a Pure Python Web framework providing a sweet API for :
 
 - easy asynchronous HTTP;
