@@ -1,0 +1,20 @@
+# We do not use sudo
+sudo: false
+
+# Python versions for matrix
+language: python
+python:
+  - "3.5"
+
+env:
+ - TOX_ENV=py35
+ - TOX_ENV=flake8
+ - TOX_ENV=coverage
+ - TOX_ENV=doc
+install:
+ - pip install tox coveralls
+script:
+ - tox -e $TOX_ENV
+
+after_success:
+ - coveralls

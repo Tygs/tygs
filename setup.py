@@ -1,35 +1,44 @@
 
+import re
 import setuptools
+
+
+def get_version(path="src/tygs/__init__.py"):
+    """ Return the version of by with regex intead of importing it"""
+    init_content = open(path, "rt").read()
+    pattern = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    return re.search(pattern, init_content, re.M).group(1)
 
 
 def get_requirements(path):
 
-    setuppy_pattern = \
+    setuppy_format = \
         'https://github.com/{user}/{repo}/tarball/master#egg={egg}'
 
-    dependency_links = []
+    setuppy_pattern = \
+        r'github.com/(?P<user>[^/.]+)/(?P<repo>[^.]+).git#egg=(?P<egg>.+)'
+
+    dep_links = []
     install_requires = []
     with open(path) as f:
         for line in f:
 
             if line.startswith('-e'):
-                url_infos = re.search(
-                    r'github.com/(?P<user>[^/.]+)/(?P<repo>[^.]+).git#egg=(?P<egg>.+)',
-                    line).groupdict()
-                dependency_links.append(setuppy_pattern.format(**url_infos))
+                url_infos = re.search(setuppy_pattern, line).groupdict()
+                dep_links.append(setuppy_format.format(**url_infos))
                 egg_name = '=='.join(url_infos['egg'].rsplit('-', 1))
                 install_requires.append(egg_name)
             else:
                 install_requires.append(line.strip())
 
-    return install_requires, dependency_links
+    return install_requires, dep_links
 
 
-requirements, dependency_links = get_requirements('requirements.txt')
-dev_requirements, dependency_links = get_requirements('dev-requirements.txt')
+requirements, dep_links = get_requirements('requirements.txt')
+dev_requirements, dev_dep_links = get_requirements('dev-requirements.txt')
 
 setuptools.setup(name='tygs',
-                 version='0.2.0',
+                 version=get_version(),
                  description='New generation web framework',
                  long_description=open('README.rst').read().strip(),
                  author='Sam, Max & friends',
@@ -41,6 +50,8 @@ setuptools.setup(name='tygs',
                  extras_require={
                      'dev': dev_requirements
                  },
+                 setup_requires=['pytest-runner'],
+                 tests_require=dev_requirements,
                  include_package_data=True,
                  license='WTFPL',
                  zip_safe=False,
