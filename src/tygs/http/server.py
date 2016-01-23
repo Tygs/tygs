@@ -99,11 +99,13 @@ class Server:
         self.handler = self.app._aiohttp_app.make_handler()
         self._server_factory = self.loop.create_server(self.handler, '0.0.0.0',
                                                        8080)
-        self.server = asyncio.ensure_future(self._server_factory)
+
+    async def start(self):
+        self.server = await asyncio.ensure_future(self._server_factory)
         self.app.register('stop', self.stop)
 
-    def stop(self):
-        self.loop.run_until_complete(self.handler.finish_connections(1.0))
+    async def stop(self):
+        await self.handler.finish_connections(1.0)
         self.server.close()
-        self.loop.run_until_complete(self.server.wait_closed())
-        self.loop.run_until_complete(self.app._aiohttp_app.finish())
+        await self.server.wait_closed()
+        await self.app._aiohttp_app.finish()
