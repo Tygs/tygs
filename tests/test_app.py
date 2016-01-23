@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch, Mock
 
 from tygs.app import App
 from tygs.components import SignalDispatcher
-from .async_mock import AsyncMock
+from tygs.test_utils import AsyncMock
 
 
 @pytest.fixture

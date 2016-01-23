@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import jinja2
 
 from tygs import components, app
-from .async_mock import AsyncMock
+from tygs.test_utils import AsyncMock
 
 
 def test_component():

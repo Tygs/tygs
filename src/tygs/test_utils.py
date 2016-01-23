@@ -9,6 +9,3 @@ class AsyncMock(Mock):
         async def coro(*args, **kwargs):
             return call
         return asyncio.ensure_future(coro())
-
-    async def __await__(self, *args, **kwargs):
-        return self.__call__(*args, **kwargs)
