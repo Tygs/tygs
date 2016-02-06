@@ -19,3 +19,15 @@ async def test_async_mock():
     m = AsyncMock()
     await m('test')
     m.assert_called_once_with('test')
+
+
+@pytest.mark.asyncio
+async def test_asyncio_mock_with_await():
+    m = AsyncMock()
+    await m('test')
+    m.assert_called_once_with('test')
+    assert m.call_count == 1
+
+    await m
+    m.assert_called_with()
+    assert m.call_count == 2
