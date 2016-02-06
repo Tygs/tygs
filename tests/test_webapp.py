@@ -63,8 +63,8 @@ async def test_ready(webapp):
             assert webapp.project_dir == "project_dir"
             ensure_ready()
 
-        await webapp.ready('project_dir')
-        await webapp.stop()
+        await webapp.async_ready('project_dir')
+        await webapp.async_stop()
         ensure_ready.assert_called_once_with()
 
 
@@ -72,8 +72,7 @@ async def test_ready(webapp):
 async def test_ready_project_dir(webapp):
 
     with patch('tygs.app.get_project_dir'):
-        task = webapp.ready()
+        await webapp.async_ready()
         from tygs.app import get_project_dir
         get_project_dir.assert_called_once_with()
-        await task
-        await webapp.stop()
+        await webapp.async_stop()

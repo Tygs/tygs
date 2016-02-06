@@ -27,31 +27,40 @@ class App:
             component.prepare()
         await asyncio.gather(*self.trigger('init'))
         await asyncio.gather(*self.trigger('ready'))
-        self.trigger('running')
+        return asyncio.gather(*self.trigger('running'))
 
     def ready(self, cwd=None):
         if cwd is None:
             cwd = get_project_dir()
         self.project_dir = Path(cwd)
-        task = asyncio.ensure_future(self.setup_lifecycle())
+        task = self.setup_lifecycle()
         loop = asyncio.get_event_loop()
-        if not loop.is_running():
-            try:
-                loop.run_forever()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                self.stop(True)
+        try:
+            loop.run_forever()
+        except RuntimeError as e:
+            raise RuntimeError('app.ready() can’t be called while an event '
+                               'loop is running, maybe you want to call '
+                               '“await app.async_ready()” instead?') from e
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.stop()
         return task
 
-    def stop(self, close_loop=False):
+    def async_ready(self, cwd=None):
+        if cwd is None:
+            cwd = get_project_dir()
+        self.project_dir = Path(cwd)
+        task = self.setup_lifecycle()
+        return task
+
+    def stop(self):
         loop = asyncio.get_event_loop()
-        async def future():
-            futures = self.trigger('stop')
-            try:
-                await asyncio.gather(*futures)
-            finally:
-                # TODO: add a logging system
-                if close_loop:
-                    loop.close()
-        return asyncio.ensure_future(future())
+        futures = asyncio.gather(*self.trigger('stop'))
+        loop.stop()
+        loop.run_until_complete(futures)
+        loop.close()
+
+    async def async_stop(self):
+        futures = asyncio.gather(*self.trigger('stop'))
+        return asyncio.ensure_future(futures)

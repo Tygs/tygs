@@ -34,14 +34,16 @@ def test_event_wrappers(app):
 async def test_ready(app):
 
     app.setup_lifecycle = AsyncMock()
-    await app.ready('project_dir')
+    await app.async_ready('project_dir')
     app.setup_lifecycle.assert_called_once_with()
     assert app.project_dir == "project_dir"
+    await app.async_stop()
 
 
 @pytest.mark.asyncio
 async def test_ready_cwd(app):
     with patch('tygs.app.get_project_dir'):
-        app.ready()
+        await app.async_ready()
         from tygs.app import get_project_dir
         get_project_dir.assert_called_once_with()
+        await app.async_stop()
