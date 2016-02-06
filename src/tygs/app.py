@@ -33,7 +33,7 @@ class App:
         if cwd is None:
             cwd = get_project_dir()
         self.project_dir = Path(cwd)
-        task = self.setup_lifecycle()
+        asyncio.ensure_future(self.setup_lifecycle())
         loop = asyncio.get_event_loop()
         try:
             loop.run_forever()
@@ -45,13 +45,12 @@ class App:
             pass
         finally:
             self.stop()
-        return task
 
-    def async_ready(self, cwd=None):
+    async def async_ready(self, cwd=None):
         if cwd is None:
             cwd = get_project_dir()
         self.project_dir = Path(cwd)
-        task = self.setup_lifecycle()
+        task = await self.setup_lifecycle()
         return task
 
     def stop(self):

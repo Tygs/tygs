@@ -44,7 +44,6 @@ class SignalDispatcher(Component):
             else:
                 handler = asyncio.coroutine(handler)()
 
-        # TODO: check if handler is a coroutine, convert it otherwise
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):

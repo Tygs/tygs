@@ -13,9 +13,15 @@ def webapp():
 
 
 @pytest.fixture
-def app():
+def app_with_mocked_signal_dispatcher():
 
     app = App("namespace")
     signal_mock = MagicMock(app.components['signals'])
     app.components['signals'] = signal_mock
+    return app
+
+@pytest.fixture
+def app():
+
+    app = App("namespace")
     return app
