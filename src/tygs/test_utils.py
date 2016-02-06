@@ -14,5 +14,4 @@ class AsyncMock(Mock):
         return coro()
 
     def __await__(self):
-        task = asyncio.ensure_future(self())
-        return task.__await__()
+        return self().__await__()
