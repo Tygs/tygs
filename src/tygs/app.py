@@ -25,47 +25,32 @@ class App:
 
     def change_state(self, value):
         self.state = value
-        print('STATE', self.state)
         return self.trigger(value)
 
     async def setup_environnement(self, cwd=None):
         """ Set project dir """
-        print('setup env')
         if cwd is None:
             cwd = get_project_dir()
         self.project_dir = Path(cwd)
 
     async def setup_components(self):
-        print('setup component')
         components = self.components.values()
-
-
-        futures = []
-        for name, c in self.components.items():
-            print('setup', name, c.setup)
-            a = ensure_awaitable(c.setup)
-            print('awaitbale', a)
-            futures.append(a)
-
-        #futures = [ensure_awaitable(c.setup) for c in components]
+        futures = [ensure_awaitable(c.setup) for c in components]
         # waiting for answer for BDFL
-        return asyncio.gather(*futures)
+        return await asyncio.gather(*futures)
 
     async def setup(self, cwd=None):
-        print('setup app')
         # Set project dir
         await self.setup_environnement(cwd)
-        print("STATE", self.state)
         # Tell all component to hook them self to the events they want to react
         # to
         await self.setup_components()
-        print("STATE", self.state)
+
         # TODO: create a namespace for the events. We will want more details
         # than this like project.init, project.ready, app_name.init, app_name.ready,
         # etc.
         # TODO: allow to pass arguments in events.
         # TODO: allow synchronous events
-        print('schedule lifecycle')
         await self.change_state('init')
 
         await self.change_state('ready')

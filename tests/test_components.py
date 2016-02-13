@@ -66,13 +66,7 @@ def test_signal_dispatcher_decorator():
 async def test_jinja2_renderer():
     my_app = app.App('test')
 
-    print("app", id(my_app))
-    print("dispatcher", id(my_app.components['signals']))
-    print("handlers", id(my_app.components['signals'].signals))
-
     my_app.components['renderer'] = components.Jinja2Renderer(my_app)
-
-    import ipdb; ipdb.set_trace()
 
     my_app.project_dir = MagicMock()
     await my_app.async_ready()

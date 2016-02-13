@@ -63,7 +63,8 @@ async def test_ready(webapp):
             assert webapp.project_dir == "project_dir"
             ensure_ready()
 
-        await webapp.async_ready('project_dir')
+        running_future = await webapp.async_ready('project_dir')
+        await running_future
         await webapp.async_stop()
         ensure_ready.assert_called_once_with()
 

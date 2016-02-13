@@ -29,21 +29,11 @@ class SignalDispatcher(Component):
         self.signals = {}
 
     def register(self, event, handler):
-        print('register', event, handler)
         handler = ensure_awaitable(handler)
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):
         handlers = self.signals.get(event, [])
-
-        print(event)
-        if event == "init":
-            print("in init")
-            import pdb; pdb.set_trace()
-            print(handlers)
-            for h in handlers:
-                print(h)
-
         futures = (asyncio.ensure_future(handler) for handler in handlers)
         return asyncio.gather(*futures)
 
@@ -65,7 +55,6 @@ class Jinja2Renderer(Component):
                                       autoescape=True)
 
     def setup(self):
-        print("setup jinja renderer")
         self.app.register('init', self.lazy_init)
 
     def render(self, template, context):
