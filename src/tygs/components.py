@@ -74,6 +74,7 @@ class HttpComponent(Component):
             # TODO: allow passing explicit endpoint
             endpoint = "{}.{}".format(self.app.ns, func.__name__)
             self.router.add_route(url, endpoint, func)
+            return func
         return decorator
 
 

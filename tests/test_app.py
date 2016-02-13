@@ -6,12 +6,6 @@ from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
 
 
-from . import fixtures
-
-app = fixtures.app
-app_with_mocked_signal_dispatcher = fixtures.app_with_mocked_signal_dispatcher
-
-
 def test_basic_api(app):
     assert app.ns == "namespace"
     assert isinstance(app.components['signals'], SignalDispatcher)

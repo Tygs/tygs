@@ -5,6 +5,7 @@ import jinja2
 
 from tygs import components, app
 from tygs.test_utils import AsyncMock
+from tygs.http.server import Router
 
 from tygs.app import App
 
@@ -76,3 +77,31 @@ async def test_jinja2_renderer():
     assert my_app.components['renderer'].env.autoescape
 
     await my_app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_jinja2_renderer_render(app, fixture_dir):
+
+    jinja = components.Jinja2Renderer(app)
+    app.components['renderer'] = jinja
+
+    app.project_dir = fixture_dir
+
+    await jinja.lazy_init()
+
+    s = jinja.render('hello.html', {'foo': 'doh'})
+    assert s == "doh: bar"
+
+
+@pytest.mark.asyncio
+async def test_http_component(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.get('/troloo')
+    def foo():
+        pass
+    args = ['/troloo', 'namespace.foo', foo]
+    http.router.add_route.assert_called_once_with(*args)

@@ -1,6 +1,9 @@
-import pytest
 
 from unittest.mock import MagicMock
+
+import pytest
+
+from path import Path
 
 from tygs.webapp import WebApp
 from tygs.app import App
@@ -23,6 +26,10 @@ def app_with_mocked_signal_dispatcher():
 
 @pytest.fixture
 def app():
-
     app = App("namespace")
     return app
+
+
+@pytest.fixture
+def fixture_dir():
+    return Path(__file__).parent / "fixtures"

@@ -9,10 +9,6 @@ from tygs.test_utils import AsyncMock
 from tygs.webapp import WebApp
 from tygs.components import SignalDispatcher, HttpComponent, Jinja2Renderer
 
-from . import fixtures
-
-webapp = fixtures.webapp
-
 
 def test_basic_api(webapp):
 

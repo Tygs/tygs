@@ -1,3 +1,5 @@
+
+import inspect
 from unittest.mock import patch, Mock
 
 import pytest
@@ -31,3 +33,37 @@ async def test_asyncio_mock_with_await():
     await m
     m.assert_called_with()
     assert m.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ensure_awaitable():
+
+    m = AsyncMock()
+
+    def test():
+        return m
+    a = utils.ensure_awaitable(test)
+    assert inspect.isawaitable(a)
+    await a
+    m.assert_called_once_with()
+
+    m = AsyncMock()
+
+    async def test():
+        return await m
+    a = utils.ensure_awaitable(test)
+    assert inspect.isawaitable(a)
+    await a
+    m.assert_called_once_with()
+
+    m = AsyncMock()
+
+    async def test():
+        return await m
+    a = utils.ensure_awaitable(test())
+    assert inspect.isawaitable(a)
+    await a
+    m.assert_called_once_with()
+
+    with pytest.raises(TypeError):
+        a = utils.ensure_awaitable("test()")
