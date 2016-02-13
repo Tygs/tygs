@@ -3,7 +3,7 @@ import asyncio
 from path import Path
 
 from .components import SignalDispatcher
-from .utils import get_project_dir
+from .utils import get_project_dir, ensure_awaitable
 
 
 class App:
@@ -12,6 +12,7 @@ class App:
         self.ns = ns
         self.components = {'signals': SignalDispatcher(self)}
         self.project_dir = None
+        self.state = "pristine"
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -22,48 +23,61 @@ class App:
     def trigger(self, event):
         return self.components['signals'].trigger(event)
 
-    # TODO: rename this method. setup_lifecycle is a poor name. schedule_lifecycle_steps?
-    async def setup_lifecycle(self):
+    def change_state(self, value):
+        self.state = value
+        print('STATE', self.state)
+        return self.trigger(value)
 
-        # TODO: find a better name. "prepare" is not really explicit. We use
-        # prepare to actually trigger the very first code of components, which
-        # in fact is mostly used to attach to init.
-        # Somethin like load() or mount() would be more appropriate.
+    async def setup_environnement(self, cwd=None):
+        """ Set project dir """
+        print('setup env')
+        if cwd is None:
+            cwd = get_project_dir()
+        self.project_dir = Path(cwd)
 
-        # TODO: this should be a separate method and be unit tested. something
-        # like mount_components(). Also, since it's blocking, it should be
-        # called outside of setup_lifecycle and be document as a place were
-        # you still can block.
-        for component in self.components.values():
-            component.prepare()
+    async def setup_components(self):
+        print('setup component')
+        components = self.components.values()
 
+
+        futures = []
+        for name, c in self.components.items():
+            print('setup', name, c.setup)
+            a = ensure_awaitable(c.setup)
+            print('awaitbale', a)
+            futures.append(a)
+
+        #futures = [ensure_awaitable(c.setup) for c in components]
+        # waiting for answer for BDFL
+        return asyncio.gather(*futures)
+
+    async def setup(self, cwd=None):
+        print('setup app')
+        # Set project dir
+        await self.setup_environnement(cwd)
+        print("STATE", self.state)
+        # Tell all component to hook them self to the events they want to react
+        # to
+        await self.setup_components()
+        print("STATE", self.state)
         # TODO: create a namespace for the events. We will want more details
         # than this like project.init, project.ready, app_name.init, app_name.ready,
         # etc.
         # TODO: allow to pass arguments in events.
         # TODO: allow synchronous events
-        await asyncio.gather(*self.trigger('init'))
-        await asyncio.gather(*self.trigger('ready'))
+        print('schedule lifecycle')
+        await self.change_state('init')
+
+        await self.change_state('ready')
         # Not awaiting so all callbacks from here are no blocking.
-        return asyncio.gather(*self.trigger('running'))
+        return self.change_state('running')
+
+    async def async_ready(self, cwd=None):
+        return await self.setup(cwd)
 
     def ready(self, cwd=None):
-        # TODO: this should be it's own method. Something like setup_environnement()
-        if cwd is None:
-            cwd = get_project_dir()
-        self.project_dir = Path(cwd)
-
-        # TODO: calling ensure_future is redundant, as setup_lifecycle is
-        # returns a future_already
-        asyncio.ensure_future(self.setup_lifecycle())
         loop = asyncio.get_event_loop()
-        # TODO: this should be a separate method. Really ready should just be
-        # a series of call:
-        # - self.setup_environnement()
-        # - self.mount_components()
-        # - self.schedule_lifecycle_steps()
-        # - self.start_event_loop()
-        # This will be easier to understand, and easier to test.
+        loop.run_until_complete(self.async_ready())
         try:
             loop.run_forever()
         except RuntimeError as e:
@@ -78,24 +92,16 @@ class App:
         finally:
             self.stop()
 
-    async def async_ready(self, cwd=None):
-        if cwd is None:
-            cwd = get_project_dir()
-        self.project_dir = Path(cwd)
-        task = await self.setup_lifecycle()
-        return task
+    async def async_stop(self):
+        return await self.trigger('stop')
 
     def stop(self):
         # TODO: we are basically using the same code as async_top, but
         # stopping the loop and running it manually. Let's DRY and reuse
         # async_stop
         loop = asyncio.get_event_loop()
-        futures = asyncio.gather(*self.trigger('stop'))
         loop.stop()
-        loop.run_until_complete(futures)
+        loop.run_until_complete(self.async_stop())
         loop.close()
 
-    async def async_stop(self):
-        # TODO: calling ensure_future is redundant, as gather already returns one
-        futures = asyncio.gather(*self.trigger('stop'))
-        return asyncio.ensure_future(futures)
+

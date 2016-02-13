@@ -45,7 +45,7 @@ async def test_signal_dispatcher():
     assert handler3 in s.signals['wololo']
     assert handler in s.signals['wololo']
 
-    await asyncio.gather(*s.trigger('wololo'))
+    await s.trigger('wololo')
 
     amock.assert_called_once_with()
     amock3.assert_called_once_with()
@@ -65,12 +65,21 @@ def test_signal_dispatcher_decorator():
 @pytest.mark.asyncio
 async def test_jinja2_renderer():
     my_app = app.App('test')
+
+    print("app", id(my_app))
+    print("dispatcher", id(my_app.components['signals']))
+    print("handlers", id(my_app.components['signals'].signals))
+
     my_app.components['renderer'] = components.Jinja2Renderer(my_app)
 
+    import ipdb; ipdb.set_trace()
+
     my_app.project_dir = MagicMock()
-    await my_app.setup_lifecycle()
+    await my_app.async_ready()
 
     assert hasattr(my_app.components['renderer'], 'env')
     assert isinstance(my_app.components['renderer'].env.loader,
                       jinja2.FileSystemLoader)
     assert my_app.components['renderer'].env.autoescape
+
+    await my_app.async_stop()
