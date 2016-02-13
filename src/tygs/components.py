@@ -28,6 +28,8 @@ class SignalDispatcher(Component):
         self.signals = {}
 
     def register(self, event, handler):
+
+        # TODO: extract this bloc and make this a utils.ensure_awaitable func
         if not inspect.isawaitable(handler):
 
             if not callable(handler):
@@ -98,6 +100,8 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         self.tygs_app = tygs_app
 
     async def handle_request(self, message, payload):
+        # TODO: split this method into submethods for easier testing
+        # and pass it upstream
         if self.access_log:
             now = self._loop.time()
 

@@ -48,6 +48,8 @@ class HttpResponse:
         self.template = template
         self.data.update(context)
 
+        # TODO: make it return self
+
     def render_response(self):
         return self.renderer(self)
 
