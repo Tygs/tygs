@@ -20,6 +20,7 @@ def app_with_mocked_signal_dispatcher():
     app.components['signals'] = signal_mock
     return app
 
+
 @pytest.fixture
 def app():
 

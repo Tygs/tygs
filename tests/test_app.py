@@ -35,10 +35,8 @@ def test_event_wrappers(app_with_mocked_signal_dispatcher):
 
 @pytest.mark.asyncio
 async def test_async_ready(app):
-
     app.setup = AsyncMock()
-
-    res_from_setup = await app.async_ready('project_dir')
+    await app.async_ready('project_dir')
     app.setup.assert_called_once_with('project_dir')
     await app.async_stop()
 

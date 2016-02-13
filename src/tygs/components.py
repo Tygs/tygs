@@ -1,5 +1,4 @@
 
-import inspect
 import asyncio
 
 from functools import partial

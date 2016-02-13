@@ -47,8 +47,7 @@ class App:
         await self.setup_components()
 
         # TODO: create a namespace for the events. We will want more details
-        # than this like project.init, project.ready, app_name.init, app_name.ready,
-        # etc.
+        # like project.init, project.ready, app_name.init, app_name.ready, etc.
         # TODO: allow to pass arguments in events.
         # TODO: allow synchronous events
         await self.change_state('init')
@@ -66,12 +65,9 @@ class App:
         try:
             loop.run_forever()
         except RuntimeError as e:
-            # TODO: remove typographic quotes as they can not be encoded to ascii
-            # Exception messages and __repr__ in Python should always be ascii
-            # comptible
-            raise RuntimeError('app.ready() can’t be called while an event '
+            raise RuntimeError("app.ready() can't be called while an event "
                                'loop is running, maybe you want to call '
-                               '“await app.async_ready()” instead?') from e
+                               '"await app.async_ready()" instead?') from e
         except KeyboardInterrupt:
             pass
         finally:
@@ -88,5 +84,3 @@ class App:
         loop.stop()
         loop.run_until_complete(self.async_stop())
         loop.close()
-
-
