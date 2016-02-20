@@ -78,9 +78,6 @@ class App:
         return await self.trigger('stop')
 
     def stop(self):
-        # TODO: we are basically using the same code as async_top, but
-        # stopping the loop and running it manually. Let's DRY and reuse
-        # async_stop
         loop = asyncio.get_event_loop()
         loop.stop()
         loop.run_until_complete(self.async_stop())
