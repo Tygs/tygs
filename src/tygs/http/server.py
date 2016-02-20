@@ -29,8 +29,8 @@ class HttpResponseController:
     def __init__(self, request):
         self.request = request
         self.renderer = None
-        self.template = None
-        self.template_engine = request.app.components['templates']
+        self.template_name = None
+        self.template_engine = request.app.components.get('templates', None)
         self.data = {}
         # TODO : set reason automatically when you set status
         # TODO: create a status object with embeded reason
@@ -40,14 +40,18 @@ class HttpResponseController:
         self.charset = "utf-8"
         self.headers = {}
 
-    def render(self, template, context=None):
+    def template(self, template, context=None):
+        """
+        Registers context variables and template name.
+        This method does not actually render templates.
+        """
         context = context or {}
         # TODO make template engine pluggable
         self.renderer = self.template_engine.render_to_response_dict
-        self.template = template
+        self.template_name = template
         self.data.update(context)
 
-        # TODO: make it return self
+        return self
 
     def render_response(self):
         return self.renderer(self)

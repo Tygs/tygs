@@ -95,7 +95,7 @@ async def test_jinja2_renderer_render(app, fixture_dir):
 
 def test_jinja2_renderer_render_to_response_dict(app):
     req = MagicMock()
-    req.app.components.__getitem__.return_value = \
+    req.app.components.get.return_value = \
         components.Jinja2Renderer(app)
 
     resp = HttpResponseController(req)
