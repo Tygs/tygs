@@ -53,7 +53,7 @@ def test_ready(app, aloop):
     @app.on('running')
     def stahp():
         beacon()
-        aloop.call_soon(app.stop)
+        app.stop()
 
     app.ready()
     beacon.assert_called_once_with()
