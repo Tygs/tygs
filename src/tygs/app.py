@@ -61,8 +61,12 @@ class App:
 
     def ready(self, cwd=None):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_ready())
+        # loop.run_until_complete(self.async_ready())
+        asyncio.ensure_future(self.async_ready())
         try:
+            print('-'*80)
+            print('Ready to run forever')
+            print('-'*80)
             loop.run_forever()
         except RuntimeError as e:
             raise RuntimeError("app.ready() can't be called while an event "

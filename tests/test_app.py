@@ -1,9 +1,21 @@
 import pytest
+import asyncio
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 
 from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
+
+
+@pytest.fixture
+def aloop(*args, **kargs):
+    """ Ensure they is an opened event loop available and return it"""
+    loop = asyncio.get_event_loop()
+    if loop.is_closed():
+        policy = asyncio.get_event_loop_policy()
+        loop = policy.new_event_loop(*args, **kargs)
+        policy.set_event_loop(loop)
+    return loop
 
 
 def test_basic_api(app):
@@ -33,6 +45,36 @@ async def test_async_ready(app):
     await app.async_ready('project_dir')
     app.setup.assert_called_once_with('project_dir')
     await app.async_stop()
+
+
+def test_ready(app, aloop):
+    beacon = Mock()
+
+    @app.on('running')
+    def stahp():
+        beacon()
+        app.stop()
+
+    app.ready()
+    beacon.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_ready_in_loop(app):
+    with pytest.raises(RuntimeError):
+        app.ready()
+
+
+def test_ready_keyboard_interrupt(app, aloop):
+    beacon = Mock()
+
+    @app.on('running')
+    def stahp():
+        beacon()
+        raise KeyboardInterrupt()
+
+    app.ready()
+    beacon.assert_called_once_with()
 
 
 @pytest.mark.asyncio
