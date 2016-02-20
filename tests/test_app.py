@@ -11,7 +11,7 @@ from tygs.test_utils import AsyncMock
 def aloop(*args, **kargs):
     """ Ensure they is an opened event loop available and return it"""
     loop = asyncio.get_event_loop()
-    if loop.is_closed():
+    if loop.is_closed():  # noqa;
         policy = asyncio.get_event_loop_policy()
         loop = policy.new_event_loop(*args, **kargs)
         policy.set_event_loop(loop)
