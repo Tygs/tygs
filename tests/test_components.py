@@ -5,7 +5,7 @@ import jinja2
 
 from tygs import components, app
 from tygs.test_utils import AsyncMock
-from tygs.http.server import Router
+from tygs.http.server import Router, HttpResponseController
 
 from tygs.app import App
 
@@ -89,8 +89,29 @@ async def test_jinja2_renderer_render(app, fixture_dir):
 
     await jinja.lazy_init()
 
-    s = jinja.render('hello.html', {'foo': 'doh'})
+    s = jinja.render_to_string('hello.html', {'foo': 'doh'})
     assert s == "doh: bar"
+
+
+def test_jinja2_renderer_render_to_response_dict(app):
+    req = MagicMock()
+    req.app.components.__getitem__.return_value = \
+        components.Jinja2Renderer(app)
+
+    resp = HttpResponseController(req)
+    render = MagicMock()
+    render.return_value = 'Hey, I’m a body!'
+    resp.template_engine.render_to_string = render
+
+    rendered = resp.template_engine.render_to_response_dict(resp)
+
+    assert isinstance(rendered, dict)
+    assert len(rendered) == 6
+    assert rendered == {'status': 200, 'reason': 'OK',
+                        'content_type': 'text/html',
+                        'charset': 'utf-8',
+                        'headers': {},
+                        'body': 'Hey, I’m a body!'.encode()}
 
 
 @pytest.mark.asyncio

@@ -9,7 +9,7 @@ from aiohttp.web_reqrep import Request
 from aiohttp.web import RequestHandlerFactory, RequestHandler
 
 from .utils import ensure_awaitable
-from .http.server import HttpRequest, Router
+from .http.server import HttpRequestController, Router
 
 
 class Component:
@@ -56,10 +56,23 @@ class Jinja2Renderer(Component):
     def setup(self):
         self.app.register('init', self.lazy_init)
 
-    def render(self, template, context):
+    def render_to_string(self, template, context):
         # TODO : handle template not found
         template = self.env.get_template(template)
         return template.render(context)
+
+    def render_to_response_dict(self, response):
+        body = self.render_to_string(response.template, response.data)
+        body = body.encode(response.charset)
+
+        return {'status': response.status,
+                'reason': response.reason,
+                'content_type': response.content_type,
+                'charset': response.charset,
+                # TODO: update default heaers
+                'headers': response.headers,
+                'body': body
+                }
 
 
 class HttpComponent(Component):
@@ -97,7 +110,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             secure_proxy_ssl_header=self._secure_proxy_ssl_header)
 
         # TODO: solve this issue with passing tygs app everywhere
-        tygs_request = HttpRequest(self.tygs_app, aiothttp_request)
+        tygs_request = HttpRequestController(self.tygs_app, aiothttp_request)
 
         # for __repr__
         self._meth = aiothttp_request.method

@@ -6,10 +6,7 @@ from aiohttp.web_reqrep import Response
 from werkzeug.routing import Map, Rule
 
 
-from .renderer import template_renderer
-
-
-class HttpRequest:
+class HttpRequestController:
     def __init__(self, app, aiohttp_request):
         self.app = app
         self._aiohttp_request = aiohttp_request
@@ -20,18 +17,20 @@ class HttpRequest:
         self.default_method = aiohttp_request.method
         self.path_info = aiohttp_request.path
         self.query_args = aiohttp_request.query_string
-        self.response = HttpResponse(self)
+        self.response = HttpResponseController(self)
         self.url_params = {}
 
 # TODO: add aiohttp_request.POST and aiohttp_request.GET: remove multidict ?
 # TODO: cookies
 
 
-class HttpResponse:
+class HttpResponseController:
 
     def __init__(self, request):
         self.request = request
         self.renderer = None
+        self.template = None
+        self.template_engine = request.app.components['templates']
         self.data = {}
         # TODO : set reason automatically when you set status
         # TODO: create a status object with embeded reason
@@ -44,7 +43,7 @@ class HttpResponse:
     def render(self, template, context=None):
         context = context or {}
         # TODO make template engine pluggable
-        self.renderer = template_renderer
+        self.renderer = self.template_engine.render_to_response_dict
         self.template = template
         self.data.update(context)
 
@@ -55,14 +54,7 @@ class HttpResponse:
 
     def _build_aiohttp_reponse(self):
         frozen_http_response = self.render_response()
-        return Response(
-            status=frozen_http_response.status,
-            reason=frozen_http_response.reason,
-            content_type=frozen_http_response.content_type,
-            charset=frozen_http_response.charset,
-            headers=frozen_http_response.headers,
-            body=frozen_http_response.body
-        )
+        return Response(**frozen_http_response)
 
 
 class Router:
