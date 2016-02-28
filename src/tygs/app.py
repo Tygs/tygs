@@ -13,6 +13,7 @@ class App:
         self.components = {'signals': SignalDispatcher(self)}
         self.project_dir = None
         self.state = "pristine"
+        self.main_future = None
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -54,31 +55,46 @@ class App:
 
         await self.change_state('ready')
         # Not awaiting so all callbacks from here are no blocking.
-        return self.change_state('running')
+        self.main_future = self.change_state('running')
+        return self.main_future
 
     async def async_ready(self, cwd=None):
-        return await self.setup(cwd)
+        self.main_future = self.setup(cwd)
+        return await asyncio.ensure_future(self.main_future)
 
     def ready(self, cwd=None):
         loop = asyncio.get_event_loop()
         # loop.run_until_complete(self.async_ready())
-        asyncio.ensure_future(self.async_ready())
         try:
+            self.main_future = asyncio.ensure_future(self.async_ready())
+            clean = True
             loop.run_forever()
         except RuntimeError as e:
-            raise RuntimeError("app.ready() can't be called while an event "
-                               'loop is running, maybe you want to call '
-                               '"await app.async_ready()" instead?') from e
+            clean = False  # do not stop cleanly if the user made a mistake
+            if loop.is_running():
+                raise RuntimeError("app.ready() can't be called while an event "
+                                   'loop is running, maybe you want to call '
+                                   '"await app.async_ready()" instead?') from e
+            else:
+                raise RuntimeError("app.ready() can't be called while an event "
+                                   'closed event loop. Please install a fresh '
+                                   'one with policy.new_event_loop() or make '
+                                   "sure you don't close it by mistake") from e
         except KeyboardInterrupt:
             pass
         finally:
-            self.stop()
+            if clean and not self.state == "stop":
+                self.stop()
 
     async def async_stop(self):
-        return await self.trigger('stop')
+        return await self.change_state('stop')
 
     def stop(self):
+        self.state = 'stop'
         loop = asyncio.get_event_loop()
         loop.stop()
         loop.run_until_complete(self.async_stop())
         loop.close()
+        exception = self.main_future.exception()
+        if not isinstance(exception, KeyboardInterrupt):
+            raise exception

@@ -65,6 +65,8 @@ async def test_ready_in_loop(app):
         app.ready()
 
 
+# aloop make sure we have a fresh loop to start with event if py.test closed
+# the previous one
 def test_ready_keyboard_interrupt(app, aloop):
     beacon = Mock()
 
