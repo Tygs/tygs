@@ -1,4 +1,3 @@
-
 from unittest import mock
 
 import pytest
@@ -10,7 +9,7 @@ from aiohttp.protocol import HttpVersion
 from aiohttp.protocol import RawRequestMessage
 
 # taken from aiohttp tests
-# see: https://github.com/KeepSafe/aiohttp/blob/master/tests/test_web_request.py
+# see:https://github.com/KeepSafe/aiohttp/blob/master/tests/test_web_request.py
 
 
 @pytest.fixture

@@ -60,5 +60,4 @@ def test_get_handler_404(app, aiohttp_request):
     with pytest.raises(NotFound) as e:
         handler, arguments = aiorun(coro)
 
-
     assert e.value.code == 404

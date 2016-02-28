@@ -128,7 +128,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
         #############
         tygs_request, handler = await self._get_handler_and_tygs_req(message,
-                                                                    payload)
+                                                                     payload)
         ############
 
         ####################

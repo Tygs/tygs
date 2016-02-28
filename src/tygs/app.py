@@ -72,13 +72,13 @@ class App:
         except RuntimeError as e:
             clean = False  # do not stop cleanly if the user made a mistake
             if loop.is_running():
-                raise RuntimeError("app.ready() can't be called while an event "
-                                   'loop is running, maybe you want to call '
+                raise RuntimeError("app.ready() can't be called while an event"
+                                   ' loop is running, maybe you want to call '
                                    '"await app.async_ready()" instead?') from e
             else:
-                raise RuntimeError("app.ready() can't be called while an event "
-                                   'closed event loop. Please install a fresh '
-                                   'one with policy.new_event_loop() or make '
+                raise RuntimeError("app.ready() can't be called while an event"
+                                   ' closed event loop. Please install a fresh'
+                                   ' one with policy.new_event_loop() or make '
                                    "sure you don't close it by mistake") from e
         except KeyboardInterrupt:
             pass

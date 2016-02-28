@@ -7,7 +7,7 @@ from tygs import components, app
 from tygs.components import AioHttpRequestHandlerAdapter
 from tygs.test_utils import AsyncMock
 from tygs.http.server import (Router, HttpResponseController,
-                             HttpRequestController)
+                              HttpRequestController)
 from tygs.app import App
 
 from aiohttp.multidict import CIMultiDict

@@ -13,5 +13,3 @@ def aioloop():
         loop = policy.new_event_loop()
         policy.set_event_loop(loop)
     return loop
-
-
