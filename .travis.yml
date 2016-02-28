@@ -10,7 +10,6 @@ python:
   - "3.5-dev"
 
 env:
- - TOX_ENV=py35
  - TOX_ENV=flake8
  - TOX_ENV=coverage-no-report
  - TOX_ENV=doc
