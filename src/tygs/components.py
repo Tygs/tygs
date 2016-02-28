@@ -97,12 +97,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         super().__init__(*args, **kwargs)
         self.tygs_app = tygs_app
 
-    async def handle_request(self, message, payload):
-        # TODO: split this method into submethods for easier testing
-        # and pass it upstream
-        if self.access_log:
-            now = self._loop.time()
-
+    async def _tygs_request_from_message(self, message, payload):
         app = self._app
         aiothttp_request = Request(
             app, message, payload,
@@ -116,11 +111,24 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         self._meth = aiothttp_request.method
         self._path = aiothttp_request.path
 
+        return tygs_request
+
+    async def _get_handler_and_tygs_req(self, message, payload):
+        # message contains the HTTP headers, payload contains the request body
+        tygs_request = await self._tygs_request_from_message(message, payload)
+        handler, arguments = await self._router.get_handler(tygs_request)
+        tygs_request.url_params.update(arguments)
+        return tygs_request, handler
+
+    async def handle_request(self, message, payload):
+        if self.access_log:
+            now = self._loop.time()
+
     # try:
 
         #############
-        handler, arguments = await self._router.get_handler(tygs_request)
-        tygs_request.url_params.update(arguments)
+        tygs_request, handler = await self._get_handler_and_tygs_req(message,
+                                                                    payload)
         ############
 
         ####################
@@ -134,28 +142,29 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         ############
 
         ###############
-
         await handler(tygs_request, tygs_request.response)
-
         ###############
 
     # except HTTPException as exc:
     #     resp = exc
 
-        aiohttp_reponse = tygs_request.response._build_aiohttp_reponse()
-        resp_msg = await aiohttp_reponse.prepare(aiothttp_request)
-        await aiohttp_reponse.write_eof()
+        response = tygs_request.response
+        resp_msg = self._write_response_to_client(tygs_request, response)
 
-        # notify server about keep-alive
-        self.keep_alive(resp_msg.keep_alive())
+        # for repr
+        self._meth = 'none'
+        self._path = 'none'
 
         # log access
         if self.access_log:
             self.log_access(message, None, resp_msg, self._loop.time() - now)
 
-        # for repr
-        self._meth = 'none'
-        self._path = 'none'
+    async def _write_response_to_client(self, request, response):
+        aiohttp_reponse = response._build_aiohttp_response()
+        resp_msg = await aiohttp_reponse.prepare(request._aiohttp_request)
+        await aiohttp_reponse.write_eof()
+        self.keep_alive(resp_msg.keep_alive())
+        return resp_msg
 
 
 # I'm so sorry

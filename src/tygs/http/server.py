@@ -7,6 +7,9 @@ from werkzeug.routing import Map, Rule
 
 
 class HttpRequestController:
+
+    # TODO: decouple aiothttp_request from HttpRequestController
+    # TODO: decouple httprequestcontroller from httprequest
     def __init__(self, app, aiohttp_request):
         self.app = app
         self._aiohttp_request = aiohttp_request
@@ -14,7 +17,7 @@ class HttpRequestController:
         self.script_name = None  # TODO : figure out what script name does
         self.subdomain = None  # TODO: figure out subdomain handling
         self.url_scheme = aiohttp_request.scheme
-        self.default_method = aiohttp_request.method
+        self.method = aiohttp_request.method
         self.path_info = aiohttp_request.path
         self.query_args = aiohttp_request.query_string
         self.response = HttpResponseController(self)
@@ -56,9 +59,8 @@ class HttpResponseController:
     def render_response(self):
         return self.renderer(self)
 
-    def _build_aiohttp_reponse(self):
-        frozen_http_response = self.render_response()
-        return Response(**frozen_http_response)
+    def _build_aiohttp_response(self):
+        return Response(**self.render_response())
 
 
 class Router:
@@ -79,7 +81,7 @@ class Router:
             script_name=http_request.script_name,
             subdomain=http_request.subdomain,
             url_scheme=http_request.url_scheme,
-            default_method=http_request.default_method,
+            default_method=http_request.method,
             path_info=http_request.path_info,
             query_args=http_request.query_args
         )

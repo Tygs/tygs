@@ -8,4 +8,4 @@ fail_under = 80
 exclude_lines =
     pragma: no cover
     pass
-    noqa;
+    noqa

@@ -1,5 +1,7 @@
 from unittest.mock import Mock, MagicMock
 
+from aiohttp.web_reqrep import Response
+
 from tygs.http import server
 
 
@@ -8,7 +10,7 @@ def test_httprequest_controller(app):
     httprequest = server.HttpRequestController(app, aiohttp_request)
     mapping = {'server_name': 'host',
                'url_scheme': 'scheme',
-               'default_method': 'method',
+               'method': 'method',
                'path_info': 'path',
                'query_args': 'query_string'}
 
@@ -57,3 +59,21 @@ def test_httpresponse_controller_render_response(webapp):
 
     httpresponse.render_response()
     httpresponse.renderer.assert_called_once_with(httpresponse)
+
+
+def test_httpresponse_build_aiohttp_reponse(webapp):
+    request = MagicMock()
+    request.app = webapp
+    httpresponse = server.HttpResponseController(request)
+    httpresponse.render_response = Mock(return_value={
+        "body": b"toto",
+        "content_type": "text/html",
+        "status": 418
+    })
+
+    aiohttpres = httpresponse._build_aiohttp_response()
+
+    assert isinstance(aiohttpres, Response)
+    assert aiohttpres.body == b"toto"
+    assert aiohttpres.content_type == "text/html"
+    assert aiohttpres.status == 418

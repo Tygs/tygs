@@ -4,10 +4,14 @@ from unittest.mock import MagicMock
 import jinja2
 
 from tygs import components, app
+from tygs.components import AioHttpRequestHandlerAdapter
 from tygs.test_utils import AsyncMock
-from tygs.http.server import Router, HttpResponseController
-
+from tygs.http.server import (Router, HttpResponseController,
+                             HttpRequestController)
 from tygs.app import App
+
+from aiohttp.multidict import CIMultiDict
+from aiohttp.protocol import HttpVersion, RawRequestMessage
 
 
 def test_component():
@@ -126,3 +130,116 @@ async def test_http_component(app):
         pass
     args = ['/troloo', 'namespace.foo', foo]
     http.router.add_route.assert_called_once_with(*args)
+
+
+@pytest.fixture
+def handleradapter(webapp):
+    adapter = AioHttpRequestHandlerAdapter(MagicMock(),
+                                           MagicMock(),
+                                           webapp.components['http'].router,
+                                           tygs_app=webapp)
+    adapter.transport = MagicMock()
+    return adapter
+
+
+@pytest.fixture
+def aiohttpmsg():
+    def factory(method="GET", url="/toto", headers=None):
+        headers = CIMultiDict(headers or {})
+        if "HOST" not in headers:
+            headers['HOST'] = "test.local"
+        return RawRequestMessage(method, url, HttpVersion(1, 1),
+                                 headers, [], False, False)
+    return factory
+
+
+# and I'm not sorry this time
+@pytest.mark.asyncio
+async def test_requesthandleradapter_tygs_request_from_message(handleradapter,
+                                                               aiohttpmsg):
+
+    message = aiohttpmsg('OPTION', '/toto')
+    request = await handleradapter._tygs_request_from_message(message,
+                                                              MagicMock())
+
+    assert isinstance(request, HttpRequestController)
+    assert request.method == 'OPTION' == handleradapter._meth
+    assert request.path_info == '/toto' == handleradapter._path
+
+
+@pytest.mark.asyncio
+async def test_requesthandleradapter_get_handler_and_tygs_req(handleradapter,
+                                                              aiohttpmsg):
+
+    message = aiohttpmsg('OPTION', '/toto')
+
+    def toto():
+        pass  # noqa
+
+    handleradapter._router.add_route('/toto', 'toto_url', toto)
+
+    req, handler = await handleradapter._get_handler_and_tygs_req(message,
+                                                                  MagicMock())
+
+    assert isinstance(req, HttpRequestController)
+    assert req.method == 'OPTION'
+    assert req.path_info == '/toto'
+    assert handler == toto
+
+
+@pytest.mark.asyncio
+async def test_requesthandleradapter_handle_request(handleradapter,
+                                                    aiohttpmsg):
+
+    handleradapter.access_log = True
+    handleradapter.log_access = MagicMock()
+    handleradapter._write_response_to_client = MagicMock()
+
+    beacon = MagicMock()
+
+    req_res = []
+
+    async def toto(req, res):
+        assert req.path_info == "/toto"
+        assert req.method == "GET"
+        req_res.extend((req, res))
+        beacon()
+        return res
+
+    handleradapter._router.add_route('/toto', 'toto_url', toto)
+
+    message = aiohttpmsg('GET', '/toto')
+    await handleradapter.handle_request(message, MagicMock())
+
+    handleradapter._write_response_to_client.assert_called_once_with(*req_res)
+
+    beacon.assert_called_once_with()
+
+    assert handleradapter._meth == "none"
+    assert handleradapter._path == "none"
+    assert handleradapter.log_access.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_requesthandleradapter_write_response_to_client(handleradapter,
+                                                              webapp):
+
+    resp_msg = MagicMock()
+    resp_msg.keep_alive = MagicMock(return_value='wololo')
+
+    aiothttp_req = MagicMock()
+    aiohttp_res = AsyncMock()
+    aiohttp_res.prepare = AsyncMock(return_value=resp_msg)
+
+    req = HttpRequestController(webapp, aiothttp_req)
+    res = req.response
+    res._build_aiohttp_response = MagicMock(return_value=aiohttp_res)
+
+    handleradapter.keep_alive = MagicMock()
+
+    await handleradapter._write_response_to_client(req, res)
+
+    aiohttp_res.prepare.assert_called_once_with(aiothttp_req)
+    aiohttp_res.write_eof.assert_called_once_with()
+    handleradapter.keep_alive.assert_called_once_with("wololo")
+    resp_msg.keep_alive.assert_called_once_with()

@@ -1,11 +1,15 @@
 
+import asyncio
 import inspect
 from unittest.mock import patch, Mock
 
 import pytest
 
+from tygs.utils import ensure_awaitable
 from tygs import utils
 from tygs.test_utils import AsyncMock
+
+from .fixtures.asyncio import aioloop
 
 
 def test_get_project_dir():
@@ -67,3 +71,11 @@ async def test_ensure_awaitable():
 
     with pytest.raises(TypeError):
         a = utils.ensure_awaitable("test()")
+
+
+def aiorun(callable_obj):
+    """ Run this in a event loop """
+    loop = aioloop()
+    awaitable = ensure_awaitable(callable_obj)
+    future = asyncio.ensure_future(awaitable)
+    return loop.run_until_complete(future)
