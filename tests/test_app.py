@@ -47,6 +47,16 @@ def test_ready(app, aioloop):
     beacon.assert_called_once_with()
 
 
+def test_ready_with_cwd(app, aioloop):
+
+    @app.on('running')
+    def stahp():
+        app.stop()
+
+    app.ready('test/cwd')
+    assert app.project_dir == 'test/cwd'
+
+
 def test_ready_with_closed_loop(app, aioloop):
     aioloop.close()
 

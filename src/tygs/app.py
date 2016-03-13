@@ -55,18 +55,17 @@ class App:
 
         await self.change_state('ready')
         # Not awaiting so all callbacks from here are no blocking.
-        self.main_future = self.change_state('running')
-        return self.main_future
+        return self.change_state('running')
 
     async def async_ready(self, cwd=None):
-        self.main_future = self.setup(cwd)
-        return await asyncio.ensure_future(self.main_future)
+        self.main_future = asyncio.ensure_future(self.setup(cwd))
+        return await self.main_future
 
     def ready(self, cwd=None):
         loop = asyncio.get_event_loop()
         # loop.run_until_complete(self.async_ready())
         try:
-            self.main_future = asyncio.ensure_future(self.async_ready())
+            asyncio.ensure_future(self.async_ready(cwd))
             clean = True
             loop.run_forever()
         except RuntimeError as e:
@@ -95,4 +94,7 @@ class App:
         loop.stop()
         loop.run_until_complete(self.async_stop())
         loop.close()
-        self.main_future.exception()
+        try:
+            self.main_future.exception()
+        except asyncio.futures.InvalidStateError:
+            pass
