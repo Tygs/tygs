@@ -75,7 +75,7 @@ async def test_ensure_awaitable():
 
 def aiorun(callable_obj):
     """ Run this in a event loop """
-    loop = aioloop()
+    loop = next(aioloop())
     awaitable = ensure_awaitable(callable_obj)
     future = asyncio.ensure_future(awaitable)
     return loop.run_until_complete(future)

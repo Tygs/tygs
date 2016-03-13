@@ -58,43 +58,52 @@ class App:
         return self.change_state('running')
 
     async def async_ready(self, cwd=None):
-        self.main_future = asyncio.ensure_future(self.setup(cwd))
-        return await self.main_future
+        self.main_future = await asyncio.ensure_future(self.setup(cwd))
+        return self.main_future
 
     def ready(self, cwd=None):
         loop = asyncio.get_event_loop()
-        # loop.run_until_complete(self.async_ready())
         try:
-            asyncio.ensure_future(self.async_ready(cwd))
+            fut = asyncio.ensure_future(self.async_ready(cwd))
             clean = True
             loop.run_forever()
         except RuntimeError as e:
             clean = False  # do not stop cleanly if the user made a mistake
             if loop.is_running():
+                try:
+                    fut.cancel()
+                except NameError:  # noqa
+                    pass
                 raise RuntimeError("app.ready() can't be called while an event"
                                    ' loop is running, maybe you want to call '
                                    '"await app.async_ready()" instead?') from e
-            else:
-                raise RuntimeError("app.ready() can't be called with a"
-                                   ' closed event loop. Please install a fresh'
-                                   ' one with policy.new_event_loop() or make '
-                                   "sure you don't close it by mistake") from e
+            raise RuntimeError("app.ready() can't be called with a"
+                               ' closed event loop. Please install a fresh'
+                               ' one with policy.new_event_loop() or make '
+                               "sure you don't close it by mistake") from e
         except KeyboardInterrupt:
             pass
         finally:
             if clean and not self.state == "stop":
-                self.stop()
+                self._stop()
 
     async def async_stop(self):
         return await self.change_state('stop')
 
     def stop(self):
-        self.state = 'stop'
+        """
+        Stops the loop, which will trigger a clean app stop later.
+        """
         loop = asyncio.get_event_loop()
-        loop.stop()
+        if loop.is_running():
+            self.state = 'stopping'
+            loop.stop()
+
+    def _stop(self):
+        loop = asyncio.get_event_loop()
+        if self.state != 'stopping':
+            loop.stop()
+        self.state = 'stop'
         loop.run_until_complete(self.async_stop())
         loop.close()
-        try:
-            self.main_future.exception()
-        except asyncio.futures.InvalidStateError:
-            pass
+        self.main_future.exception()
