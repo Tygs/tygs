@@ -146,7 +146,7 @@ def handleradapter(webapp):
 def aiohttpmsg():
     def factory(method="GET", url="/toto", headers=None):
         headers = CIMultiDict(headers or {})
-        if "HOST" not in headers:
+        if "HOST" not in headers:  # noqa
             headers['HOST'] = "test.local"
         return RawRequestMessage(method, url, HttpVersion(1, 1),
                                  headers, [], False, False)
@@ -218,6 +218,25 @@ async def test_requesthandleradapter_handle_request(handleradapter,
     assert handleradapter._meth == "none"
     assert handleradapter._path == "none"
     assert handleradapter.log_access.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_requesthandleradapter_handle_request_without_log(handleradapter,
+                                                                aiohttpmsg):
+
+    handleradapter.access_log = False
+    handleradapter.log_access = MagicMock()
+    handleradapter._write_response_to_client = MagicMock()
+
+    async def toto(req, res):
+        return res
+
+    handleradapter._router.add_route('/toto', 'toto_url', toto)
+
+    message = aiohttpmsg('GET', '/toto')
+    await handleradapter.handle_request(message, MagicMock())
+
+    assert handleradapter.log_access.call_count == 0
 
 
 @pytest.mark.asyncio

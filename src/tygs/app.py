@@ -76,7 +76,7 @@ class App:
                                    ' loop is running, maybe you want to call '
                                    '"await app.async_ready()" instead?') from e
             else:
-                raise RuntimeError("app.ready() can't be called while an event"
+                raise RuntimeError("app.ready() can't be called with a"
                                    ' closed event loop. Please install a fresh'
                                    ' one with policy.new_event_loop() or make '
                                    "sure you don't close it by mistake") from e
@@ -96,5 +96,3 @@ class App:
         loop.run_until_complete(self.async_stop())
         loop.close()
         exception = self.main_future.exception()
-        if not isinstance(exception, KeyboardInterrupt):
-            raise exception

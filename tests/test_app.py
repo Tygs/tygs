@@ -7,17 +7,6 @@ from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
 
 
-@pytest.fixture
-def aloop(*args, **kargs):
-    """ Ensure they is an opened event loop available and return it"""
-    loop = asyncio.get_event_loop()
-    if loop.is_closed():  # noqa;
-        policy = asyncio.get_event_loop_policy()
-        loop = policy.new_event_loop(*args, **kargs)
-        policy.set_event_loop(loop)
-    return loop
-
-
 def test_basic_api(app):
     assert app.ns == "namespace"
     assert isinstance(app.components['signals'], SignalDispatcher)
@@ -47,7 +36,7 @@ async def test_async_ready(app):
     await app.async_stop()
 
 
-def test_ready(app, aloop):
+def test_ready(app, aioloop):
     beacon = Mock()
 
     @app.on('running')
@@ -59,15 +48,22 @@ def test_ready(app, aloop):
     beacon.assert_called_once_with()
 
 
+def test_ready_with_closed_loop(app, aioloop):
+    aioloop.close()
+
+    with pytest.raises(RuntimeError):
+        app.ready()
+
+
 @pytest.mark.asyncio
 async def test_ready_in_loop(app):
     with pytest.raises(RuntimeError):
         app.ready()
 
 
-# aloop make sure we have a fresh loop to start with event if py.test closed
+# aioloop make sure we have a fresh loop to start with event if py.test closed
 # the previous one
-def test_ready_keyboard_interrupt(app, aloop):
+def test_ready_keyboard_interrupt(app, aioloop):
     beacon = Mock()
 
     @app.on('running')
