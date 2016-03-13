@@ -34,8 +34,8 @@ def get_requirements(path):
     return install_requires, dep_links
 
 
-requirements, dep_links = get_requirements('requirements.txt')
-dev_requirements, dev_dep_links = get_requirements('dev-requirements.txt')
+requirements, _ = get_requirements('requirements.txt')
+dev_requirements, _ = get_requirements('dev-requirements.txt')
 
 setuptools.setup(name='tygs',
                  version=get_version(),
