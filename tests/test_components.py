@@ -106,6 +106,7 @@ def test_jinja2_renderer_render_to_response_dict(app):
     render = MagicMock()
     render.return_value = 'Hey, I’m a body!'
     resp.template_engine.render_to_string = render
+    resp.template_name = 'test_resp.html'
 
     rendered = resp.template_engine.render_to_response_dict(resp)
 
@@ -116,6 +117,7 @@ def test_jinja2_renderer_render_to_response_dict(app):
                         'charset': 'utf-8',
                         'headers': {},
                         'body': 'Hey, I’m a body!'.encode()}
+    render.assert_called_once_with('test_resp.html', {})
 
 
 @pytest.mark.asyncio
@@ -193,7 +195,7 @@ async def test_requesthandleradapter_handle_request(handleradapter,
 
     handleradapter.access_log = True
     handleradapter.log_access = MagicMock()
-    handleradapter._write_response_to_client = MagicMock()
+    handleradapter._write_response_to_client = AsyncMock()
 
     beacon = MagicMock()
 
@@ -226,7 +228,7 @@ async def test_requesthandleradapter_handle_request_without_log(handleradapter,
 
     handleradapter.access_log = False
     handleradapter.log_access = MagicMock()
-    handleradapter._write_response_to_client = MagicMock()
+    handleradapter._write_response_to_client = AsyncMock()
 
     async def toto(req, res):
         return res

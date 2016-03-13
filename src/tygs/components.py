@@ -62,7 +62,7 @@ class Jinja2Renderer(Component):
         return template.render(context)
 
     def render_to_response_dict(self, response):
-        body = self.render_to_string(response.template, response.data)
+        body = self.render_to_string(response.template_name, response.data)
         body = body.encode(response.charset)
 
         return {'status': response.status,
@@ -149,7 +149,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
     #     resp = exc
 
         response = tygs_request.response
-        resp_msg = self._write_response_to_client(tygs_request, response)
+        resp_msg = await self._write_response_to_client(tygs_request, response)
 
         # for repr
         self._meth = 'none'
