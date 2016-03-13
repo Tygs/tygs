@@ -95,4 +95,4 @@ class App:
         loop.stop()
         loop.run_until_complete(self.async_stop())
         loop.close()
-        exception = self.main_future.exception()
+        self.main_future.exception()
