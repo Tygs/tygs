@@ -15,8 +15,8 @@ class App:
         self.project_dir = None
         self.state = "pristine"
         self.main_future = None
-        loop = asyncio.get_event_loop()
-        loop.set_task_factory(create_task_factory(loop))
+        self.loop = asyncio.get_event_loop()
+        self.loop.set_task_factory(create_task_factory(self.loop))
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -61,21 +61,21 @@ class App:
         return self.change_state('running')
 
     async def async_ready(self, cwd=None):
+
         self.main_future = await asyncio.ensure_future(self.setup(cwd))
         return self.main_future
 
     def ready(self, cwd=None):
-        loop = asyncio.get_event_loop()
         for signame in ('SIGINT', 'SIGTERM'):
-            loop.add_signal_handler(getattr(signal, signame),
-                                    self.stop)
+            self.loop.add_signal_handler(getattr(signal, signame),
+                                         self.stop)
         clean = False  # do not stop cleanly if the user made a mistake
         try:
             fut = asyncio.ensure_future(self.async_ready(cwd))
             clean = True
-            loop.run_forever()
+            self.loop.run_forever()
         except RuntimeError as e:
-            if loop.is_running():
+            if self.loop.is_running():
                 try:
                     fut.cancel()
                 except NameError:  # noqa
@@ -99,17 +99,15 @@ class App:
         """
         Stops the loop, which will trigger a clean app stop later.
         """
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        if self.loop.is_running():
             self.state = 'stopping'
-            loop.stop()
+            self.loop.stop()
 
     def _stop(self, timeout=5):
         if self.state != "stop":
-            loop = asyncio.get_event_loop()
             if self.state != 'stopping':
-                loop.stop()
+                self.loop.stop()
             self.state = 'stop'
-            loop.run_until_complete(self.async_stop())
-            loop.close()
+            self.loop.run_until_complete(self.async_stop())
+            self.loop.close()
             self.main_future.exception()
