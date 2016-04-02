@@ -1,5 +1,6 @@
 
 import re
+import sys
 import setuptools
 
 
@@ -23,19 +24,27 @@ def get_requirements(path):
     with open(path) as f:
         for line in f:
 
+            if "sys_platform" in line:
+                line, platform = line.split(';')
+
+                match = re.search(r'sys_platform\s*==\s*(.*)', platform)
+
+                if sys.platform != match.groups()[0].strip('\"\''):
+                    continue
+
             if line.startswith('-e'):
                 url_infos = re.search(setuppy_pattern, line).groupdict()
                 dep_links.append(setuppy_format.format(**url_infos))
-                egg_name = '=='.join(url_infos['egg'].rsplit('-', 1))
-                install_requires.append(egg_name)
-            else:
-                install_requires.append(line.strip())
+                line = '=='.join(url_infos['egg'].rsplit('-', 1))
+
+            install_requires.append(line.strip())
 
     return install_requires, dep_links
 
 
 requirements, _ = get_requirements('requirements.txt')
 dev_requirements, _ = get_requirements('dev-requirements.txt')
+
 
 setuptools.setup(name='tygs',
                  version=get_version(),

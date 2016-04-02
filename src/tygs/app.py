@@ -1,9 +1,10 @@
+
 import asyncio
 
 from path import Path
 
 from .components import SignalDispatcher
-from .utils import get_project_dir, ensure_awaitable
+from .utils import get_project_dir, ensure_awaitable, SigTermHandler
 
 
 class App:
@@ -14,6 +15,7 @@ class App:
         self.project_dir = None
         self.state = "pristine"
         self.main_future = None
+        self.sigterm_handler = SigTermHandler()
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -62,6 +64,7 @@ class App:
         return self.main_future
 
     def ready(self, cwd=None):
+        self.sigterm_handler.register(self._stop)
         loop = asyncio.get_event_loop()
         try:
             fut = asyncio.ensure_future(self.async_ready(cwd))
@@ -85,7 +88,7 @@ class App:
         except KeyboardInterrupt:
             pass
         finally:
-            if clean and not self.state == "stop":
+            if clean:
                 self._stop()
 
     async def async_stop(self):
@@ -100,11 +103,13 @@ class App:
             self.state = 'stopping'
             loop.stop()
 
-    def _stop(self):
-        loop = asyncio.get_event_loop()
-        if self.state != 'stopping':
-            loop.stop()
-        self.state = 'stop'
-        loop.run_until_complete(self.async_stop())
-        loop.close()
-        self.main_future.exception()
+    def _stop(self, timeout=5):
+        if self.state != "stop":
+            loop = asyncio.get_event_loop()
+            if self.state != 'stopping':
+                loop.stop()
+            self.state = 'stop'
+            loop.run_until_complete(self.async_stop())
+            loop.close()
+            self.main_future.exception()
+        self.sigterm_handler.unregister(self._stop)

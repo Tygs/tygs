@@ -6,7 +6,7 @@ from tygs.http.server import Router, HttpRequestController
 from werkzeug.routing import Map
 from werkzeug.exceptions import NotFound
 
-from .test_utils import aiorun
+from tygs.utils import aiorun
 
 
 def test_create_router():

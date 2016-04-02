@@ -1,14 +1,13 @@
 
-import asyncio
-
 import pytest
+
+from tygs.utils import aioloop as get_loop
 
 
 @pytest.yield_fixture
 def aioloop():
     """ Ensure there is an opened event loop available and return it"""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    policy.set_event_loop(loop)
+
+    loop = get_loop()
     yield loop
     loop.close()

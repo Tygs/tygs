@@ -4,3 +4,4 @@ aiohttp-jinja2>=0.6,<0.7
 jinja2>=2.8,<2.9
 path.py>=8.1,<8.2
 Werkzeug>=0.11,<0.12
+pywin32 > 1.0 ; sys_platform == 'win32'
