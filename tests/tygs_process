@@ -1,0 +1,7 @@
+from tygs import WebApp
+
+
+app, http = WebApp.quickstart('test')
+
+if __name__ == '__main__':
+    app.ready()

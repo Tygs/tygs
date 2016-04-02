@@ -1,10 +1,10 @@
-
+import signal
 import asyncio
 
 from path import Path
 
 from .components import SignalDispatcher
-from .utils import get_project_dir, ensure_awaitable, SigTermHandler
+from .utils import get_project_dir, ensure_awaitable, create_task_factory
 
 
 class App:
@@ -15,7 +15,8 @@ class App:
         self.project_dir = None
         self.state = "pristine"
         self.main_future = None
-        self.sigterm_handler = SigTermHandler()
+        loop = asyncio.get_event_loop()
+        loop.set_task_factory(create_task_factory(loop))
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -64,14 +65,16 @@ class App:
         return self.main_future
 
     def ready(self, cwd=None):
-        self.sigterm_handler.register(self._stop)
         loop = asyncio.get_event_loop()
+        for signame in ('SIGINT', 'SIGTERM'):
+            loop.add_signal_handler(getattr(signal, signame),
+                                    self.stop)
+        clean = False  # do not stop cleanly if the user made a mistake
         try:
             fut = asyncio.ensure_future(self.async_ready(cwd))
             clean = True
             loop.run_forever()
         except RuntimeError as e:
-            clean = False  # do not stop cleanly if the user made a mistake
             if loop.is_running():
                 try:
                     fut.cancel()
@@ -85,8 +88,6 @@ class App:
                                    ' closed event loop. Please install a fresh'
                                    ' one with policy.new_event_loop() or make '
                                    "sure you don't close it by mistake") from e
-        except KeyboardInterrupt:
-            pass
         finally:
             if clean:
                 self._stop()
@@ -112,4 +113,3 @@ class App:
             loop.run_until_complete(self.async_stop())
             loop.close()
             self.main_future.exception()
-        self.sigterm_handler.unregister(self._stop)

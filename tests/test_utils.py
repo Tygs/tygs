@@ -67,17 +67,3 @@ async def test_ensure_awaitable():
 
     with pytest.raises(TypeError):
         a = utils.ensure_awaitable("test()")
-
-
-def test_register_exit_func():
-
-    foo = Mock()
-    bar = Mock()
-
-    handler = utils.SigTermHandler()
-    handler.register(foo)
-    handler.register(bar)
-    handler.register(bar)
-
-    import pdb; pdb.set_trace()
-    assert handler.signal_callbacks == {foo, bar}

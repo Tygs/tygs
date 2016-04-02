@@ -1,5 +1,8 @@
 import pytest
 import warnings
+import subprocess
+import sys
+import time
 
 from unittest.mock import patch, MagicMock, Mock
 
@@ -36,7 +39,7 @@ async def test_async_ready(app):
     await app.async_stop()
 
 
-def test_ready(app, aioloop):
+def test_ready(aioloop, app):
     beacon = Mock()
 
     @app.on('running')
@@ -48,7 +51,7 @@ def test_ready(app, aioloop):
     beacon.assert_called_once_with()
 
 
-def test_ready_with_cwd(app, aioloop):
+def test_ready_with_cwd(aioloop, app):
     beacon = Mock()
 
     @app.on('running')
@@ -61,12 +64,12 @@ def test_ready_with_cwd(app, aioloop):
     assert app.project_dir == 'test/cwd'
 
 
-def test_stop_outside_loop(app, aioloop):
+def test_stop_outside_loop(aioloop, app):
     aioloop.close()
     app.stop()
 
 
-def test_ready_with_closed_loop(app, aioloop):
+def test_ready_with_closed_loop(aioloop, app):
     aioloop.close()
 
     with warnings.catch_warnings():
@@ -83,16 +86,33 @@ async def test_ready_in_loop(app):
 
 # aioloop make sure we have a fresh loop to start with event if py.test closed
 # the previous one
-def test_ready_keyboard_interrupt(app, aioloop):
+def test_ready_keyboard_interrupt(aioloop, app):
     beacon = Mock()
+    app._stop = Mock()
 
     @app.on('running')
     def stahp():
         beacon()
         raise KeyboardInterrupt()
 
-    app.ready()
+    try:
+        app.ready()
+    except KeyboardInterrupt:
+        pass
     beacon.assert_called_once_with()
+    app._stop.assert_called_once_with()
+
+
+def test_ready_sigterm():
+    shell = subprocess.Popen([sys.executable, 'tests/tygs_process'],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    time.sleep(.5)
+    shell.terminate()
+    stderr = shell.stderr.read()
+    return_code = shell.wait()
+    assert stderr == b''
+    assert return_code == 0
 
 
 @pytest.mark.asyncio
@@ -122,3 +142,26 @@ async def test_async_ready_cwd(app):
         from tygs.app import get_project_dir
         get_project_dir.assert_called_once_with()
         await app.async_stop()
+
+
+def test_ready_closed_loop(aioloop, app):
+    aioloop.close()
+    with pytest.raises(RuntimeError):
+        app.ready()
+
+
+def test_dirty_stop(aioloop, app):
+
+    @app.on('running')
+    def stahp():
+        with pytest.raises(RuntimeError):
+            app._stop()
+
+    app.ready()
+
+
+@pytest.mark.asyncio
+async def test_stop_twice(app):
+    await app.async_ready()
+    await app.async_stop()
+    app.stop()
