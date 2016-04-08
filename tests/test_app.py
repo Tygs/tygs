@@ -244,8 +244,3 @@ def test_fail_fast_mode_disable(aioloop, app):
         app.stop()
 
     app.ready()
-
-
-
-
-

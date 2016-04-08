@@ -60,8 +60,8 @@ class DebugException(BaseException):
         """
         Surcharge the default asyncio Task factory, by adding automatically an
         exception handler callback to every Task.
-        Returning a factory instead of a Task prevents loop.get_task_factory() to
-        be called for each Task.
+        Returning a factory instead of a Task prevents loop.get_task_factory()
+        to be called for each Task.
 
         If you want to set up your own Task factory, make sure to call this one
         too, or you'll lose Tygs Task exceptions handling.
@@ -85,4 +85,3 @@ def silence_loop_error_log(loop):
     loop.set_exception_handler(lambda loop, context: None)
     yield
     loop.set_exception_handler(old_handler)
-

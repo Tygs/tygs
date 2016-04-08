@@ -103,8 +103,8 @@ class App:
             clean = False
             raise e.from_exception
 
-        # On Ctrl+C, try a clean stop. Yes, we need it despite add_signal_handler
-        # for an unknown reason.
+        # On Ctrl+C, try a clean stop. Yes, we need it despite
+        # add_signal_handler for an unknown reason.
         except KeyboardInterrupt:
             self.stop()
 
@@ -142,7 +142,8 @@ class App:
             if self.state != 'stopping':
                 # TODO: it would be better to be able to see RuntimeError
                 # directly but we can't figure how to do it now
-                self.break_loop_with_error("Don't call _finish() directly. Call stop()")
+                msg = "Don't call _finish() directly. Call stop()"
+                self.break_loop_with_error(msg)
             self.state = 'stop'
             self.loop.run_until_complete(self.async_stop())
             self.loop.close()
