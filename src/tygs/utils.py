@@ -52,21 +52,8 @@ def clean_exceptions_cb(fut):
         raise exc
 
 
-def create_task_factory(loop):
-    """
-    Surcharge the default asyncio Task factory, by adding automatically an
-    exception handler callback to every Task.
-    Returning a factory instead of a Task prevents loop.get_task_factory() to
-    be called for each Task.
-
-    If you want to set up your own Task factory, make sure to call this one
-    too, or you'll lose Tygs Task exceptions handling.
-    """
-    old_factory = loop.get_task_factory() or asyncio.Task
-
-    def new_factory(loop, coro):
-        task = old_factory(loop=loop, coro=coro)
-        task.add_done_callback(clean_exceptions_cb)
-        return task
-
-    return new_factory
+def exception_handler_factory(app):
+    def exception_handler(loop, context):
+        loop.default_exception_handler(loop, context)
+        app.stop(context.get('exception'))
+    return exception_handler

@@ -165,3 +165,12 @@ async def test_stop_twice(app):
     await app.async_ready()
     await app.async_stop()
     app.stop()
+
+
+def test_runtime_error(aioloop, app):
+
+    @app.on('running')
+    def stahp():
+        raise Exception('Breaking the loop')
+
+    app.ready()
