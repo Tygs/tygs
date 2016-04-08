@@ -3,6 +3,8 @@ import os
 import asyncio
 import inspect
 
+import contextlib
+
 from path import Path
 
 
@@ -45,15 +47,42 @@ def aiorun(callable_obj):
     return loop.run_until_complete(awaitable)
 
 
-def clean_exceptions_cb(fut):
-    exc = fut.exception()
-    if exc is not None:
-        fut._loop.stop()
-        raise exc
+class DebugException(BaseException):
+
+    old_factory = None
+    fail_fast_mode = False
+
+    def __init__(self, from_exception):
+        self.from_exception = from_exception
+
+    @classmethod
+    def create_task_factory(cls, app):
+        """
+        Surcharge the default asyncio Task factory, by adding automatically an
+        exception handler callback to every Task.
+        Returning a factory instead of a Task prevents loop.get_task_factory() to
+        be called for each Task.
+
+        If you want to set up your own Task factory, make sure to call this one
+        too, or you'll lose Tygs Task exceptions handling.
+        """
+
+        cls.fail_fast_mode = True
+        loop = app.loop
+        old_factory = loop.get_task_factory() or asyncio.Task
+
+        def factory(loop, coro):
+            task = old_factory(loop=loop, coro=coro)
+            task.set_exception = app.break_loop_with_error
+            return task
+
+        return factory
 
 
-def exception_handler_factory(app):
-    def exception_handler(loop, context):
-        loop.default_exception_handler(loop, context)
-        app.stop(context.get('exception'))
-    return exception_handler
+@contextlib.contextmanager
+def silence_loop_error_log(loop):
+    old_handler = loop._exception_handler
+    loop.set_exception_handler(lambda loop, context: None)
+    yield
+    loop.set_exception_handler(old_handler)
+

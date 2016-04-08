@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock, Mock
 
 from tygs.components import SignalDispatcher
 from tygs.test_utils import AsyncMock
+from tygs.utils import aioloop as get_loop, DebugException
 
 
 def test_basic_api(app):
@@ -88,26 +89,33 @@ async def test_ready_in_loop(app):
 # the previous one
 def test_ready_keyboard_interrupt(aioloop, app):
     beacon = Mock()
-    app._stop = Mock()
+    real_stop = app._finish
+
+    def beacon_stop():
+        beacon()
+        real_stop()
+
+    app._finish = beacon_stop
 
     @app.on('running')
     def stahp():
         beacon()
         raise KeyboardInterrupt()
 
-    try:
-        app.ready()
-    except KeyboardInterrupt:
-        pass
-    beacon.assert_called_once_with()
-    app._stop.assert_called_once_with()
+    @app.on('stop')
+    def stop():
+        beacon()
+
+    app.ready()
+
+    assert beacon.call_count == 3
 
 
 def test_ready_sigterm():
     shell = subprocess.Popen([sys.executable, 'tests/tygs_process'],
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-    time.sleep(.5)
+    time.sleep(1)
     shell.terminate()
     stderr = shell.stderr.read()
     return_code = shell.wait()
@@ -150,14 +158,37 @@ def test_ready_closed_loop(aioloop, app):
         app.ready()
 
 
-def test_dirty_stop(aioloop, app):
+def test_ready_running_loop(aioloop, app):
+
+    async def start():
+        app.ready()
+
+    with pytest.raises(RuntimeError):
+        aioloop.run_until_complete(start())
+
+
+def test_forbid_finish(aioloop, app):
 
     @app.on('running')
     def stahp():
-        with pytest.raises(RuntimeError):
-            app._stop()
+        app._finish()
+
+    with pytest.raises(RuntimeError):
+        app.ready()
+
+
+def test_stop(aioloop, app):
+
+    @app.on('running')
+    def stop():
+        app.stop()
 
     app.ready()
+
+    # calling _finish() after stop() is a no op
+    app._finish()
+    # calling stop() again after stop() is a no op
+    app.stop()
 
 
 @pytest.mark.asyncio
@@ -167,10 +198,54 @@ async def test_stop_twice(app):
     app.stop()
 
 
-def test_runtime_error(aioloop, app):
+def test_fail_fast_mode(aioloop, app):
+
+    with pytest.raises(Exception):
+        app.fail_fast(True)
+
+        @app.on('running')
+        def stahp():
+            raise Exception('Breaking the loop')
+
+        app.ready()
+
+
+def test_fail_fast_mode_disable(aioloop, app):
+
+    app.fail_fast(True)
+    assert DebugException.fail_fast_mode
 
     @app.on('running')
     def stahp():
         raise Exception('Breaking the loop')
 
+    with pytest.raises(Exception):
+        app.ready()
+
+    app.fail_fast(False)
+    assert DebugException.old_factory is None
+    assert not DebugException.fail_fast_mode
+
+    app.fail_fast(False)  # this is a noop
+    assert DebugException.old_factory is None
+    assert not DebugException.fail_fast_mode
+
+    # refresh the loop
+    app.loop = get_loop()
+
+    # TODO: write an app.restart() method ?
+
+    @app.on('running')
+    def non_stop():
+        raise Exception('Breaking the loop')
+
+    @app.on('running')
+    def stop():
+        app.stop()
+
     app.ready()
+
+
+
+
+

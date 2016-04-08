@@ -67,3 +67,13 @@ async def test_ensure_awaitable():
 
     with pytest.raises(TypeError):
         a = utils.ensure_awaitable("test()")
+
+
+def test_silence_loop_error_log(aioloop):
+    assert aioloop._exception_handler is None
+    with utils.silence_loop_error_log(aioloop):
+        assert aioloop._exception_handler.__name__ == '<lambda>'
+        assert aioloop._exception_handler(None, None) is None
+        assert aioloop._exception_handler(1, {}) is None
+
+    assert aioloop._exception_handler is None
