@@ -99,6 +99,7 @@ def test_run_mixed(start_server):
     requests.get('http://localhost:8080/mixed')
     requests.post('http://localhost:8080/mixed')
 
+
 def test_basic_xss(start_server):
     req = requests.get('http://localhost:8080/get/<h1>test')
     assert b'Hello, &lt;h1&gt;test!' == req.content
