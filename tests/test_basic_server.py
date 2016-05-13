@@ -24,7 +24,33 @@ def start_server():
 
         @http.post('/post')
         async def post(req, res):
+            # import pdb
+            # pdb.set_trace()
             return res.template('post.html', req.url_params)
+
+        @http.put('/put')
+        async def put(req, res):
+            return res.template('index.html', req.url_params)
+
+        @http.patch('/patch')
+        async def patch(req, res):
+            return res.template('index.html', req.url_params)
+
+        @http.options('/options')
+        async def options(req, res):
+            return res.template('index.html', req.url_params)
+
+        @http.head('/head')
+        async def head(req, res):
+            return res.template('index.html', req.url_params)
+
+        @http.delete('/delete')
+        async def delete(req, res):
+            return res.template('index.html', req.url_params)
+
+        @http.route('/mixed', ['GET', 'POST'])
+        async def mixed(req, res):
+            return res.template('index.html', {})
 
         app.ready(*args, **kwargs)
 
@@ -44,6 +70,34 @@ def test_run_index(start_server):
     req = requests.get('http://localhost:8080/get/tygs')
     assert b'Hello, tygs!' == req.content
 
+
+def test_run_post(start_server):
+    requests.post('http://localhost:8080/post', data={'key': 'value'})
+
+
+def test_run_put(start_server):
+    requests.put('http://localhost:8080/put', data={'key': 'value'})
+
+
+def test_run_patch(start_server):
+    requests.patch('http://localhost:8080/patch', data={'key': 'value'})
+
+
+def test_run_options(start_server):
+    requests.options('http://localhost:8080/options')
+
+
+def test_run_head(start_server):
+    requests.head('http://localhost:8080/head')
+
+
+def test_run_delete(start_server):
+    requests.delete('http://localhost:8080/delete')
+
+
+def test_run_mixed(start_server):
+    requests.get('http://localhost:8080/mixed')
+    requests.post('http://localhost:8080/mixed')
 
 def test_basic_xss(start_server):
     req = requests.get('http://localhost:8080/get/<h1>test')
