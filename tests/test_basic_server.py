@@ -8,49 +8,55 @@ from path import Path
 import tygs
 
 
+def integration_app():
+    app, http = tygs.webapp.WebApp.quickstart("namespace")
+
+    @http.get('/')
+    async def index(req, res):
+        return res.template('index.html', {})
+
+    @http.get('/get/<name>')
+    async def get(req, res):  # not async, Tygs should make it awaitable
+        return res.template('get.html', req.url_params)
+
+    @http.post('/post')
+    async def post(req, res):
+        # import pdb
+        # pdb.set_trace()
+        return res.template('post.html', req.url_params)
+
+    @http.put('/put')
+    async def put(req, res):
+        return res.template('index.html', req.url_params)
+
+    @http.patch('/patch')
+    async def patch(req, res):
+        return res.template('index.html', req.url_params)
+
+    @http.options('/options')
+    async def options(req, res):
+        return res.template('index.html', req.url_params)
+
+    @http.head('/head')
+    async def head(req, res):
+        return res.template('index.html', req.url_params)
+
+    @http.delete('/delete')
+    async def delete(req, res):
+        return res.template('index.html', req.url_params)
+
+    @http.route('/mixed', ['GET', 'POST'])
+    async def mixed(req, res):
+        return res.template('index.html', {})
+
+    return app, http
+
+
 @pytest.yield_fixture(scope='module', autouse=True)
 def start_server():
     def run(*args, **kwargs):  # noqa
         tygs.utils.aioloop()
-        app, http = tygs.webapp.WebApp.quickstart("namespace")
-
-        @http.get('/')
-        async def index(req, res):
-            return res.template('index.html', {})
-
-        @http.get('/get/<name>')
-        async def get(req, res):  # not async, Tygs should make it awaitable
-            return res.template('get.html', req.url_params)
-
-        @http.post('/post')
-        async def post(req, res):
-            # import pdb
-            # pdb.set_trace()
-            return res.template('post.html', req.url_params)
-
-        @http.put('/put')
-        async def put(req, res):
-            return res.template('index.html', req.url_params)
-
-        @http.patch('/patch')
-        async def patch(req, res):
-            return res.template('index.html', req.url_params)
-
-        @http.options('/options')
-        async def options(req, res):
-            return res.template('index.html', req.url_params)
-
-        @http.head('/head')
-        async def head(req, res):
-            return res.template('index.html', req.url_params)
-
-        @http.delete('/delete')
-        async def delete(req, res):
-            return res.template('index.html', req.url_params)
-
-        @http.route('/mixed', ['GET', 'POST'])
-        async def mixed(req, res):
-            return res.template('index.html', {})
+        app, http = integration_app
 
         app.ready(*args, **kwargs)
 
