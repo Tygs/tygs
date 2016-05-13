@@ -19,6 +19,7 @@ def test_httprequest_controller(app):
                                                           aio_name)
     assert isinstance(httprequest.response, server.HttpResponseController)
     assert httprequest.url_params == {}
+    assert repr(httprequest).startswith('<HttpRequestController')
 
 
 def test_httpresponse_controller_init(app):

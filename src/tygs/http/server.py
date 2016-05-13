@@ -23,6 +23,10 @@ class HttpRequestController:
         self.response = HttpResponseController(self)
         self.url_params = {}
 
+    def __repr__(self):
+        return "<{} {} {!r} >".format(self.__class__.__name__,
+                                      self.method, self.path_info)
+
 # TODO: add aiohttp_request.POST and aiohttp_request.GET: remove multidict ?
 # TODO: cookies
 
