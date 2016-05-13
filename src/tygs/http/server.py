@@ -70,8 +70,8 @@ class Router:
         self.handlers = {}
 
     # TODO: remplace args and kwargs with explicit parameters
-    def add_route(self, url, endpoint, handler, *args, **kwargs):
-        rule = Rule(url, endpoint=endpoint, *args, **kwargs)
+    def add_route(self, url, endpoint, handler, methods=None, *args, **kwargs):
+        rule = Rule(url, endpoint=endpoint, methods=methods, *args, **kwargs)
         self.handlers[endpoint] = handler
         self.url_map.add(rule)
 

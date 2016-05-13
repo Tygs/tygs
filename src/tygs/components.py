@@ -76,17 +76,29 @@ class Jinja2Renderer(Component):
 
 
 class HttpComponent(Component):
+
+    GET = 'GET'
+    POST = 'POST'
+    PUT = 'PUT'
+    PATCH = 'PATCH'
+    HEAD = 'HEAD'
+    OPTIONS = 'OPTIONS'
+    DELETE = 'DELETE'
+    methods = (GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE)
+
     def __init__(self, app):
         super().__init__(app)
         self.router = Router()
+        for meth in self.methods:
+            setattr(self, meth.lower(), partial(self.route, methods=[meth]))
         # TODO: figure out namespace cascading from the app tree architecture
 
     # TODO: use explicit arguments
-    def get(self, url, *args, **kwargs):
+    def route(self, url, methods=None, *args, **kwargs):
         def decorator(func):
             # TODO: allow passing explicit endpoint
             endpoint = "{}.{}".format(self.app.ns, func.__name__)
-            self.router.add_route(url, endpoint, func)
+            self.router.add_route(url, endpoint, func, methods=methods)
             return func
         return decorator
 

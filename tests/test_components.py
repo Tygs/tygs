@@ -121,7 +121,7 @@ def test_jinja2_renderer_render_to_response_dict(app):
 
 
 @pytest.mark.asyncio
-async def test_http_component(app):
+async def test_http_component_get(app):
 
     http = components.HttpComponent(app)
     assert isinstance(http.router, Router)
@@ -130,8 +130,106 @@ async def test_http_component(app):
     @http.get('/troloo')
     def foo():
         pass
+
     args = ['/troloo', 'namespace.foo', foo]
-    http.router.add_route.assert_called_once_with(*args)
+    kwargs = {'methods': ['GET']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_post(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.post('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['POST']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_put(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.put('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['PUT']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_patch(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.patch('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['PATCH']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_options(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.options('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['OPTIONS']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_head(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.head('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['HEAD']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_http_component_delete(app):
+
+    http = components.HttpComponent(app)
+    assert isinstance(http.router, Router)
+    http.router.add_route = MagicMock()
+
+    @http.delete('/troloo')
+    def foo():
+        pass
+
+    args = ['/troloo', 'namespace.foo', foo]
+    kwargs = {'methods': ['DELETE']}
+    http.router.add_route.assert_called_once_with(*args, **kwargs)
 
 
 @pytest.fixture
