@@ -1,11 +1,12 @@
 import signal
 import asyncio
+from textwrap import dedent
 
 from path import Path
 
 from .components import SignalDispatcher
 from .utils import (get_project_dir, ensure_awaitable, DebugException,
-                    silence_loop_error_log)
+                    silence_loop_error_log, aioloop)
 
 
 class App:
@@ -74,7 +75,10 @@ class App:
         self.main_future = await asyncio.ensure_future(self.setup(cwd))
         return self.main_future
 
-    def ready(self, cwd=None):
+    def ready(self, cwd=None, force_new_loop=False):
+
+        if force_new_loop:
+            self.loop = aioloop()
 
         # If we are killed, try to gracefully exit
         if self.loop.is_running():
@@ -83,10 +87,17 @@ class App:
                                '"await app.async_ready()" instead?')
 
         if self.loop.is_closed():
-            raise RuntimeError("app.ready() can't be called while a "
-                               ' closed event loop. Please install a fresh'
-                               ' one with policy.new_event_loop() or make '
-                               "sure you don't close it by mistake")
+            raise RuntimeError(dedent("""
+                app.ready() can't be called while the event loop is closed.
+                Check that you don't close it by mistake.
+                Alternatively, you can install a fresh loop before calling
+                app.ready() by either:
+                 - passing ready(force_new_loop=True);
+                 - calling tygs.utils.aioloop();
+                 - or using policy.new_event_loop() manually.
+                 If you don't want to install a new loop, check that you
+                 don't close it by mistake.
+                """))
 
         for signame in ('SIGINT', 'SIGTERM'):
             self.loop.add_signal_handler(getattr(signal, signame),
