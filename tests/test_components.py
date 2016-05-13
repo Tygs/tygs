@@ -258,12 +258,12 @@ def aiohttpmsg():
 async def test_requesthandleradapter_tygs_request_from_message(handleradapter,
                                                                aiohttpmsg):
 
-    message = aiohttpmsg('OPTION', '/toto')
+    message = aiohttpmsg('OPTIONS', '/toto')
     request = await handleradapter._tygs_request_from_message(message,
                                                               MagicMock())
 
     assert isinstance(request, HttpRequestController)
-    assert request.method == 'OPTION' == handleradapter._meth
+    assert request.method == 'OPTIONS' == handleradapter._meth
     assert request.path_info == '/toto' == handleradapter._path
 
 
@@ -271,7 +271,7 @@ async def test_requesthandleradapter_tygs_request_from_message(handleradapter,
 async def test_requesthandleradapter_get_handler_and_tygs_req(handleradapter,
                                                               aiohttpmsg):
 
-    message = aiohttpmsg('OPTION', '/toto')
+    message = aiohttpmsg('OPTIONS', '/toto')
 
     def toto():
         pass  # noqa
@@ -282,7 +282,7 @@ async def test_requesthandleradapter_get_handler_and_tygs_req(handleradapter,
                                                                   MagicMock())
 
     assert isinstance(req, HttpRequestController)
-    assert req.method == 'OPTION'
+    assert req.method == 'OPTIONS'
     assert req.path_info == '/toto'
     assert handler == toto
 

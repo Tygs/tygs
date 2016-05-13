@@ -85,6 +85,16 @@ async def test_ready_in_loop(app):
         app.ready()
 
 
+@pytest.mark.asyncio
+async def test_ready_with_fresh_loop(app):
+
+    @app.on('running')
+    def stahp():
+        app.stop()
+
+    app.ready(force_new_loop=True)
+
+
 # aioloop make sure we have a fresh loop to start with event if py.test closed
 # the previous one
 def test_ready_keyboard_interrupt(aioloop, app):
