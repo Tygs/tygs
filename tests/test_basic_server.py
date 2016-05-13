@@ -8,7 +8,7 @@ from path import Path
 import tygs
 
 
-def integration_app():
+def integration_app():  # noqa
     app, http = tygs.webapp.WebApp.quickstart("namespace")
 
     @http.get('/')
@@ -56,7 +56,7 @@ def integration_app():
 def start_server():
     def run(*args, **kwargs):  # noqa
         tygs.utils.aioloop()
-        app, http = integration_app
+        app, http = integration_app()
 
         app.ready(*args, **kwargs)
 
