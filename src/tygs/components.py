@@ -6,8 +6,9 @@ import jinja2
 
 from aiohttp.web_reqrep import Request
 from aiohttp.web import RequestHandlerFactory, RequestHandler
+import werkzeug
 
-from .utils import ensure_coroutine, ensure_awaitable
+from .utils import ensure_coroutine, HTTP_VERBS
 from .http.server import HttpRequestController, Router
 
 
@@ -27,12 +28,12 @@ class SignalDispatcher(Component):
         self.signals = {}
 
     def register(self, event, handler):
-        handler = ensure_awaitable(handler)
+        handler = ensure_coroutine(handler)
         self.signals.setdefault(event, []).append(handler)
 
     def trigger(self, event):
         handlers = self.signals.get(event, [])
-        futures = (asyncio.ensure_future(handler) for handler in handlers)
+        futures = (asyncio.ensure_future(handler()) for handler in handlers)
         return asyncio.gather(*futures)
 
     def on(self, event):
@@ -76,33 +77,24 @@ class Jinja2Renderer(Component):
 
 class HttpComponent(Component):
 
-    GET = 'GET'
-    POST = 'POST'
-    PUT = 'PUT'
-    PATCH = 'PATCH'
-    HEAD = 'HEAD'
-    OPTIONS = 'OPTIONS'
-    DELETE = 'DELETE'
-    methods = (GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE)
-
     def __init__(self, app):
         super().__init__(app)
         self.router = Router()
-        for meth in self.methods:
+        for meth in HTTP_VERBS:
             setattr(self, meth.lower(), partial(self.route, methods=[meth]))
         # TODO: figure out namespace cascading from the app tree architecture
 
     # TODO: use explicit arguments
-    def route(self, url, methods=None, lazy_post=False, *args, **kwargs):
+    def route(self, url, *args, methods=None, lazy_body=False, **kwargs):
         def decorator(func):
 
             func = ensure_coroutine(func)
 
             @wraps(func)
             async def handler_wrapper(req, res):
-                # if self.POST not in methods and not lazy_post:
-                if self.POST in methods and not lazy_post:
-                    await req.load_post()
+                # if self.POST not in methods and not lazy_body:
+                if not lazy_body and req._aiohttp_request.has_body:
+                    await req.load_body()
                 return await func(req, res)
 
             # TODO: allow passing explicit endpoint
@@ -138,8 +130,11 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
     async def _get_handler_and_tygs_req(self, message, payload):
         # message contains the HTTP headers, payload contains the request body
         tygs_request = await self._tygs_request_from_message(message, payload)
-        handler, arguments = await self._router.get_handler(tygs_request)
-        tygs_request.url_params.update(arguments)
+        try:
+            handler, arguments = await self._router.get_handler(tygs_request)
+            tygs_request.url_args.update(arguments)
+        except werkzeug.exceptions.NotFound as e:
+            handler = self._router.get_404_handler(e)
         return tygs_request, handler
 
     async def handle_request(self, message, payload):
@@ -190,12 +185,13 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
 
 # I'm so sorry
-def aiohttp_request_handler_factory_adapter_factory(app):
+def aiohttp_request_handler_factory_adapter_factory(
+        app, *, handler_adapter=AioHttpRequestHandlerAdapter):
 
     class AioHttpRequestHandlerFactoryAdapter(RequestHandlerFactory):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self._handler = partial(AioHttpRequestHandlerAdapter, tygs_app=app)
+            self._handler = partial(handler_adapter, tygs_app=app)
             self._router = app.components['http'].router
             self._loop = asyncio.get_event_loop()
     return AioHttpRequestHandlerFactoryAdapter

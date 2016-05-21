@@ -4,7 +4,7 @@ from aiohttp.web import Application
 from .app import App
 
 from .components import (HttpComponent,
-                         aiohttp_request_handler_factory_adapter_factory,
+                         aiohttp_request_handler_factory_adapter_factory as rh,
                          Jinja2Renderer)
 
 from .http.server import Server
@@ -12,14 +12,12 @@ from .http.server import Server
 
 class WebApp(App):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, factory_adapter=rh, **kwargs):
         super().__init__(*args, **kwargs)
         self.components['http'] = HttpComponent(self)
         self.components['templates'] = Jinja2Renderer(self)
         self.http_server = None
 
-        # aliasing this stupidly long name
-        factory_adapter = aiohttp_request_handler_factory_adapter_factory
         self._aiohttp_app = Application(
             handler_factory=factory_adapter(self)
         )

@@ -2,7 +2,6 @@ import sys
 import os
 import asyncio
 import inspect
-
 import contextlib
 
 from path import Path
@@ -21,6 +20,10 @@ def ensure_coroutine(callable_obj):
     # If a coroutine function is passed instead of a coroutine, call it
     # so everything is a coroutine.
     if inspect.iscoroutinefunction(callable_obj):
+        return callable_obj
+
+    if hasattr(callable_obj, '__call__') and \
+            inspect.iscoroutinefunction(callable_obj.__call__):
         return callable_obj
 
     # If it's a normal callable is passed, wrap it as a coroutine.
@@ -92,3 +95,41 @@ def silence_loop_error_log(loop):
     loop.set_exception_handler(lambda loop, context: None)
     yield
     loop.set_exception_handler(old_handler)
+
+
+HTTP_VERBS = (
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'HEAD',
+    'OPTIONS',
+    'DELETE'
+)
+
+
+class removable_property:
+    """ like @property but the method can be replace by a regular value later
+
+        Code inspired by aiohttp's reify
+        https://github.com/KeepSafe/aiohttp/blob/master/aiohttp/helpers.py
+    """
+
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+        self.__doc__ = getattr(wrapped, '__doc__', '')
+        self.name = wrapped.__name__
+
+    def __get__(self, inst, owner, _marker=object()):
+        if inst is None:
+            return self
+        val = inst.__dict__.get(self.name, _marker)
+        if val is not _marker:
+            return val
+        return self.wrapped(inst)
+
+    def __set__(self, inst, value):
+        raise AttributeError("removable_property is read-only")
+
+    def replace_property_with(self, obj, value):
+        obj.__dict__[self.name] = value

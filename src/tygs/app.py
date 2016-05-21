@@ -160,5 +160,7 @@ class App:
                 self.break_loop_with_error(msg)
             self.state = 'stop'
             self.loop.run_until_complete(self.async_stop())
+
+            # TODO : should we really close the loop ?
             self.loop.close()
             self.main_future.exception()

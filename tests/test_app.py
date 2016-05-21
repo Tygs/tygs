@@ -137,7 +137,7 @@ def test_ready_sigterm():
 async def test_async_ready_setup(app):
 
     ensure_init = AsyncMock()
-    app.register('init', ensure_init())
+    app.register('init', ensure_init)
 
     ensure_ready = MagicMock()
 

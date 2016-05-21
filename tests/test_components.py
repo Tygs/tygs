@@ -24,13 +24,9 @@ async def test_signal_dispatcher():
     s = components.SignalDispatcher(App('test'))
     assert s.signals == {}
 
-    amock = AsyncMock()
-    amock2 = AsyncMock()
-    amock3 = AsyncMock()
-
-    handler = amock()
-    handler2 = amock2()
-    handler3 = amock3()
+    handler = AsyncMock()
+    handler2 = AsyncMock()
+    handler3 = AsyncMock()
 
     s.register('wololo', handler)
 
@@ -51,9 +47,9 @@ async def test_signal_dispatcher():
 
     await s.trigger('wololo')
 
-    amock.assert_called_once_with()
-    amock3.assert_called_once_with()
-    assert amock2.call_count == 0
+    handler.assert_called_once_with()
+    handler3.assert_called_once_with()
+    assert handler2.call_count == 0
 
 
 def test_signal_dispatcher_decorator():
@@ -264,7 +260,7 @@ async def test_requesthandleradapter_tygs_request_from_message(handleradapter,
 
     assert isinstance(request, HttpRequestController)
     assert request.method == 'OPTIONS' == handleradapter._meth
-    assert request.path_info == '/toto' == handleradapter._path
+    assert request.url_path == '/toto' == handleradapter._path
 
 
 @pytest.mark.asyncio
@@ -283,7 +279,7 @@ async def test_requesthandleradapter_get_handler_and_tygs_req(handleradapter,
 
     assert isinstance(req, HttpRequestController)
     assert req.method == 'OPTIONS'
-    assert req.path_info == '/toto'
+    assert req.url_path == '/toto'
     assert handler == toto
 
 
@@ -300,7 +296,7 @@ async def test_requesthandleradapter_handle_request(handleradapter,
     req_res = []
 
     async def toto(req, res):
-        assert req.path_info == "/toto"
+        assert req.url_path == "/toto"
         assert req.method == "GET"
         req_res.extend((req, res))
         beacon()

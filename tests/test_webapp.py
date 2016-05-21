@@ -48,7 +48,7 @@ async def test_ready(webapp):
     with patch("tygs.webapp.Server"):
 
         ensure_init = AsyncMock()
-        webapp.register('init', ensure_init())
+        webapp.register('init', ensure_init)
 
         ensure_ready = MagicMock()
 

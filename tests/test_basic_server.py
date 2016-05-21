@@ -17,33 +17,33 @@ def integration_app():  # noqa
 
     @http.get('/get/<name>')
     async def get(req, res):  # not async, Tygs should make it awaitable
-        return res.template('get.html', req.url_params)
+        return res.template('get.html', req.url_args)
 
     @http.post('/post')
     async def post(req, res):
         # import pdb
         # pdb.set_trace()
-        return res.template('post.html', req.POST)
+        return res.template('post.html', req.body)
 
     @http.put('/put')
     async def put(req, res):
-        return res.template('index.html', req.url_params)
+        return res.template('index.html', req.url_args)
 
     @http.patch('/patch')
     async def patch(req, res):
-        return res.template('index.html', req.url_params)
+        return res.template('index.html', req.url_args)
 
     @http.options('/options')
     async def options(req, res):
-        return res.template('index.html', req.url_params)
+        return res.template('index.html', req.url_args)
 
     @http.head('/head')
     async def head(req, res):
-        return res.template('index.html', req.url_params)
+        return res.template('index.html', req.url_args)
 
     @http.delete('/delete')
     async def delete(req, res):
-        return res.template('index.html', req.url_params)
+        return res.template('index.html', req.url_args)
 
     @http.route('/mixed', ['GET', 'POST'])
     async def mixed(req, res):

@@ -1,8 +1,11 @@
 from unittest.mock import Mock, MagicMock
 
+import pytest
+import aiohttp
 from aiohttp.web_reqrep import Response
 
 from tygs.http import server
+from tygs.exceptions import HttpRequestControllerError
 
 
 def test_httprequest_controller(app):
@@ -11,14 +14,14 @@ def test_httprequest_controller(app):
     mapping = {'server_name': 'host',
                'url_scheme': 'scheme',
                'method': 'method',
-               'path_info': 'path',
-               'query_args': 'query_string'}
+               'url_path': 'path',
+               'url_query': 'GET'}
 
     for tygs_name, aio_name in mapping.items():
         assert getattr(httprequest, tygs_name) == getattr(aiohttp_request,
                                                           aio_name)
     assert isinstance(httprequest.response, server.HttpResponseController)
-    assert httprequest.url_params == {}
+    assert httprequest.url_args == {}
     assert repr(httprequest).startswith('<HttpRequestController')
 
 
@@ -78,3 +81,36 @@ def test_httpresponse_build_aiohttp_reponse(webapp):
     assert aiohttpres.body == b"toto"
     assert aiohttpres.content_type == "text/html"
     assert aiohttpres.status == 418
+
+
+@pytest.mark.asyncio
+async def test_404(webapp):
+    try:
+        await webapp.async_ready()
+
+        with aiohttp.ClientSession() as session:
+            async with session.get('http://localhost:8080/') as resp:
+                assert resp.status == 404
+    finally:
+        await webapp.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_request_params(queued_webapp):
+    http = queued_webapp.components['http']
+
+    @http.get('/')
+    def index_controller(req, res):
+        pass
+
+    await queued_webapp.async_ready()
+
+    response = await queued_webapp.client.get('/', params={'param': 'value'})
+    request = response.request
+
+    assert 'param' in request
+    assert request['param'] == 'value'
+    with pytest.raises(HttpRequestControllerError):
+        request.GET
+
+    await queued_webapp.async_stop()
