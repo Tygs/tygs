@@ -23,7 +23,7 @@ def integration_app():  # noqa
     async def post(req, res):
         # import pdb
         # pdb.set_trace()
-        return res.template('post.html', req.url_params)
+        return res.template('post.html', req.POST)
 
     @http.put('/put')
     async def put(req, res):

@@ -88,16 +88,19 @@ class App:
 
         if self.loop.is_closed():
             raise RuntimeError(dedent("""
-                app.ready() can't be called while the event loop is closed.
+                App.ready() can't be called while the event loop is closed.
+
                 Check that you don't close it by mistake.
+
                 Alternatively, you can install a fresh loop before calling
-                app.ready() by either:
+                App.ready() by either:
+
                  - passing ready(force_new_loop=True);
                  - calling tygs.utils.aioloop();
-                 - or using policy.new_event_loop() manually.
-                 If you don't want to install a new loop, check that you
-                 don't close it by mistake.
-                """))
+                 - use one of the asyncio's *EventLoopPolicy API to create
+                   a new loop manually.
+
+            """))
 
         for signame in ('SIGINT', 'SIGTERM'):
             self.loop.add_signal_handler(getattr(signal, signame),

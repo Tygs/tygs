@@ -27,8 +27,15 @@ class HttpRequestController:
         return "<{} {} {!r} >".format(self.__class__.__name__,
                                       self.method, self.path_info)
 
-# TODO: add aiohttp_request.POST and aiohttp_request.GET: remove multidict ?
+    async def load_post(self):
+        post = self._aiohttp_request.post()
+        self.POST = post
+        return post
+
+# TODO: add aiohttp_request.POST and aiohttp_request.GET
 # TODO: cookies
+# TODO: send log info about multidict values: the user should know if she tries
+# to access a single value from a multidict that has multiple values
 
 
 class HttpResponseController:

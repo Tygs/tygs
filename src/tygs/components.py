@@ -1,14 +1,13 @@
-
 import asyncio
 
-from functools import partial
+from functools import partial, wraps
 
 import jinja2
 
 from aiohttp.web_reqrep import Request
 from aiohttp.web import RequestHandlerFactory, RequestHandler
 
-from .utils import ensure_awaitable
+from .utils import ensure_coroutine, ensure_awaitable
 from .http.server import HttpRequestController, Router
 
 
@@ -94,12 +93,23 @@ class HttpComponent(Component):
         # TODO: figure out namespace cascading from the app tree architecture
 
     # TODO: use explicit arguments
-    def route(self, url, methods=None, *args, **kwargs):
+    def route(self, url, methods=None, lazy_post=False, *args, **kwargs):
         def decorator(func):
+
+            func = ensure_coroutine(func)
+
+            @wraps(func)
+            async def handler_wrapper(req, res):
+                # if self.POST not in methods and not lazy_post:
+                if self.POST in methods and not lazy_post:
+                    await req.load_post()
+                return await func(req, res)
+
             # TODO: allow passing explicit endpoint
             endpoint = "{}.{}".format(self.app.ns, func.__name__)
-            self.router.add_route(url, endpoint, func, methods=methods)
-            return func
+            self.router.add_route(url, endpoint, handler_wrapper,
+                                  methods=methods)
+            return handler_wrapper
         return decorator
 
 
