@@ -2,6 +2,10 @@
 
 from unittest.mock import Mock
 
+from requests.models import RequestEncodingMixin
+
+from aiohttp.streams import StreamReader
+
 
 class AsyncMock(Mock):
 
@@ -14,3 +18,11 @@ class AsyncMock(Mock):
 
     def __await__(self):
         return self().__await__()
+
+
+def aiohttp_payload(data, encoding="utf8"):
+    payload = RequestEncodingMixin._encode_params(data).encode(encoding)
+    stream = StreamReader()
+    stream.feed_data(payload)
+    stream.feed_eof()
+    return stream

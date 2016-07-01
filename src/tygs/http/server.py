@@ -8,13 +8,14 @@ from aiohttp.helpers import reify
 
 from werkzeug.routing import Map, Rule
 
-from tygs.exceptions import HttpRequestControllerError
+from tygs.exceptions import (HttpRequestControllerError,
+                             HttpResponseControllerError)
 from tygs.utils import HTTP_VERBS, removable_property
 
 
 # TODO: move this function and other renderers to a dedicated module
 def text_renderer(response):
-    body = response.data['__text__'].encode(response.charset)
+    body = response._renderer_data.encode(response.charset)
 
     return {'status': response.status,
             'reason': response.reason,
@@ -24,6 +25,17 @@ def text_renderer(response):
             'headers': response.headers,
             'body': body
             }
+
+
+# TODO: allow the user to configure a default renderer for when no renderer
+# is set instead of getting this error. We'll need to update the exception
+# message though
+def no_renderer(response):
+    raise HttpResponseControllerError(dedent("""
+        No renderer set on "{!r}". Please set manually a renderer on it or
+        call one of the shortcut methods to do so (res.text(),
+        res.template(), res.json(), etc).
+    """.format(response)))
 
 
 class HttpRequestController:
@@ -64,7 +76,7 @@ class HttpRequestController:
         except KeyError:
             pass
 
-        return super().__getitem__(self, name)
+        return super().__getitem__(name)
 
     def __iter__(self):
         for x in self.url_query:
@@ -92,20 +104,24 @@ class HttpRequestController:
 
     def __getattr__(self, name):
 
-        if name == "GET":
+        verb = name.upper()
+        if verb == "GET":
             raise HttpRequestControllerError(dedent("""
-                There is no "GET{0}" attribute. If you are looking for the
+                There is no "GET" attribute. If you are looking for the
                 data passed as the URL query sting (usually $_GET, .GET, etc.),
                 use the "query_args" attribute.
             """))
 
-        if name in HTTP_VERBS:
+        if verb in HTTP_VERBS:
             raise HttpRequestControllerError(dedent("""
                 There is no "{0}" attribute. If you are looking for the
                 request body (usually called $_POST, $_GET, etc.), use the
                 "body" attribute. It works with all HTTP verbs and not
                 just "{0}".
             """.format(name)))
+
+        # Do not try super().__getattr__ since the parent doesn't define it.
+        raise object.__getattribute__(self, name)
 
     @reify
     def url_query(self):
@@ -140,37 +156,49 @@ class HttpResponseController:
 
     def __init__(self, request):
         self.request = request
-        self.renderer = None
-        self.template_name = None
+        self._renderer = no_renderer
         self.template_engine = request.app.components.get('templates', None)
-        self.data = {}
+        self._renderer_data = None
+        self.context = {"req": request, "res": self}
+
         # TODO : set reason automatically when you set status
-        # TODO: create a status object with embeded reason
+        # TODO: create a status NameSpace with embeded reason and code
         self.status = 200
         self.content_type = "text/html"
         self.reason = "OK"
         self.charset = "utf-8"
         self.headers = {}
 
-    def template(self, template, context=None):
+    def __repr__(self):
+        req = self.request
+        return "<{} {} {!r} >".format(self.__class__.__name__,
+                                      req.method, req.url_path)
+
+    # TODO: allow template engine to be passed here as a parameter, but
+    # also be retrieved from the app configuration. And remove it as an
+    # attribute of the HttpResponseController.
+    def template(self, template, data=None):
         """
-        Registers context variables and template name.
+        Registers data variables and template name.
         This method does not actually render templates.
         """
-        context = context or {}
+
+        self.context['template_name'] = template
+
+        self._renderer_data = {'context': self.context}
+        self._renderer_data.update(data)
+
         # TODO make template engine pluggable
-        self.renderer = self.template_engine.render_to_response_dict
-        self.template_name = template
-        self.data.update(context)
+        self._renderer = self.template_engine.render_to_response_dict
 
         return self
 
     def text(self, message):
-        self.data['__text__'] = str(message)
-        self.renderer = text_renderer
+        self._renderer_data = str(message)
+        self._renderer = text_renderer
 
     def render_response(self):
-        return self.renderer(self)
+        return self._renderer(self)
 
     def _build_aiohttp_response(self):
         return Response(**self.render_response())

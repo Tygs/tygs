@@ -1,6 +1,7 @@
 import asyncio
 
 from functools import partial, wraps
+from textwrap import dedent
 
 import jinja2
 
@@ -10,6 +11,7 @@ import werkzeug
 
 from .utils import ensure_coroutine, HTTP_VERBS
 from .http.server import HttpRequestController, Router
+from .exceptions import HttpResponseControllerError
 
 
 class Component:
@@ -62,7 +64,19 @@ class Jinja2Renderer(Component):
         return template.render(context)
 
     def render_to_response_dict(self, response):
-        body = self.render_to_string(response.template_name, response.data)
+
+        try:
+            template_name = response.context['template_name']
+
+        except KeyError:
+            raise HttpResponseControllerError(dedent("""
+                    "{!r}" context doesn't contain a template name. When you
+                    call res.template(), the template name is stored in
+                    res.context['template_name']. Make sure nothing
+                    overrides this key after it.
+                  """.format(response)))
+
+        body = self.render_to_string(template_name, response._renderer_data)
         body = body.encode(response.charset)
 
         return {'status': response.status,
@@ -113,6 +127,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
     async def _tygs_request_from_message(self, message, payload):
         app = self._app
+
         aiothttp_request = Request(
             app, message, payload,
             self.transport, self.reader, self.writer,

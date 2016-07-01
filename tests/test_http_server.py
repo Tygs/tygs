@@ -35,7 +35,6 @@ def test_httpresponse_controller_init(app):
     assert httpresponse.content_type == 'text/html'
     assert httpresponse.charset == 'utf-8'
     assert httpresponse.headers == {}
-    assert httpresponse.data == {}
 
 
 def test_httpresponse_controller_template(webapp):
@@ -46,23 +45,26 @@ def test_httpresponse_controller_template(webapp):
 
     httpresponse.template('template_name', {'foo': 'bar'})
 
-    assert httpresponse.template_name == 'template_name'
-    assert httpresponse.data == {'foo': 'bar'}
+    assert httpresponse.context['template_name'] == 'template_name'
+    context = httpresponse._renderer_data.pop('context')
+    assert "res" in context and "req" in context
+    assert httpresponse._renderer_data == {'foo': 'bar'}
 
     httpresponse.template('template_name2', {'foo2': 'bar2'})
-
-    assert httpresponse.template_name == 'template_name2'
-    assert httpresponse.data == {'foo': 'bar', 'foo2': 'bar2'}
+    context = httpresponse._renderer_data.pop('context')
+    assert "res" in context and "req" in context
+    assert httpresponse.context['template_name'] == 'template_name2'
+    assert httpresponse._renderer_data == {'foo2': 'bar2'}
 
 
 def test_httpresponse_controller_render_response(webapp):
     request = MagicMock()
     request.app = webapp
     httpresponse = server.HttpResponseController(request)
-    httpresponse.renderer = Mock()
+    httpresponse._renderer = Mock()
 
     httpresponse.render_response()
-    httpresponse.renderer.assert_called_once_with(httpresponse)
+    httpresponse._renderer.assert_called_once_with(httpresponse)
 
 
 def test_httpresponse_build_aiohttp_reponse(webapp):
@@ -101,7 +103,7 @@ async def test_request_params(queued_webapp):
 
     @http.get('/')
     def index_controller(req, res):
-        pass
+        return res.text('test')
 
     await queued_webapp.async_ready()
 

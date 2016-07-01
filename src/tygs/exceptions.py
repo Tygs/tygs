@@ -6,3 +6,7 @@ class TygsError(Exception):
 
 class HttpRequestControllerError(TygsError):
     pass
+
+
+class HttpResponseControllerError(TygsError):
+    pass
