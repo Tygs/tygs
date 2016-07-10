@@ -73,6 +73,21 @@ class HttpRequestController:
 
         try:
             return self.body[name]
+        except HttpRequestControllerError as e:
+            raise HttpRequestControllerError(dedent("""
+                When you call HttpRequestController.__getitem__() (e.g: when
+                you do req['something']), it implicitly tries to access
+                HttpRequestController.body.
+
+                If you see this error, it means you did it but you didn't call
+                HttpRequestController.load_body() before, which is necessary
+                to load and parse the request body.
+
+                HttpRequestController.load_body is called automatically
+                unless you used "lazy_body=True" in your routing code,
+                so check it out.
+                it out.
+                """)) from e
         except KeyError:
             pass
 
@@ -143,7 +158,7 @@ class HttpRequestController:
 
     async def load_body(self):
         body = await self._aiohttp_request.post()
-        HttpRequestController.body.replace_property_with(self, body)
+        self.body = body
         return body
 
 

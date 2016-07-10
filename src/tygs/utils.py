@@ -110,7 +110,6 @@ HTTP_VERBS = (
 
 class removable_property:
     """ like @property but the method can be replace by a regular value later
-
         Code inspired by aiohttp's reify
         https://github.com/KeepSafe/aiohttp/blob/master/aiohttp/helpers.py
     """
@@ -121,15 +120,11 @@ class removable_property:
         self.name = wrapped.__name__
 
     def __get__(self, inst, owner, _marker=object()):
+
+        # If inst is None, then sombody is trying to access the attribute from
+        # the class instead of the instance, and therefor, we return the
+        # descriptor itself.
         if inst is None:
             return self
-        val = inst.__dict__.get(self.name, _marker)
-        if val is not _marker:
-            return val
+
         return self.wrapped(inst)
-
-    def __set__(self, inst, value):
-        raise AttributeError("removable_property is read-only")
-
-    def replace_property_with(self, obj, value):
-        obj.__dict__[self.name] = value

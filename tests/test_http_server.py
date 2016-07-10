@@ -5,7 +5,8 @@ import aiohttp
 from aiohttp.web_reqrep import Response
 
 from tygs.http import server
-from tygs.exceptions import HttpRequestControllerError
+from tygs.exceptions import (
+    HttpRequestControllerError, HttpResponseControllerError)
 
 
 def test_httprequest_controller(app):
@@ -35,6 +36,8 @@ def test_httpresponse_controller_init(app):
     assert httpresponse.content_type == 'text/html'
     assert httpresponse.charset == 'utf-8'
     assert httpresponse.headers == {}
+    with pytest.raises(HttpResponseControllerError):
+        httpresponse.render_response()
 
 
 def test_httpresponse_controller_template(webapp):
@@ -116,3 +119,25 @@ async def test_request_params(queued_webapp):
         request.GET
 
     await queued_webapp.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_request_body(queued_webapp):
+    http = queued_webapp.components['http']
+
+    @http.get('/')
+    def index_controller(req, res):
+        return res.text('')
+
+    await queued_webapp.async_ready()
+    try:
+
+        response = await queued_webapp.client.post('/',
+                                                   params={'param': 'value'})
+        request = response.request
+
+        assert 'param' in request
+        assert 'fromage' not in request
+
+    finally:
+        await queued_webapp.async_stop()

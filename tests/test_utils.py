@@ -77,3 +77,24 @@ def test_silence_loop_error_log(aioloop):
         assert aioloop._exception_handler(1, {}) is None
 
     assert aioloop._exception_handler is None
+
+
+def test_removable_property():
+
+    m = Mock()
+
+    class MyClass:
+
+        @utils.removable_property
+        def pwet(self):
+            m()
+            return 'method'
+
+    my_class_instance = MyClass()
+    assert m.call_count == 0
+    assert my_class_instance.pwet == 'method'
+    assert m.call_count == 1
+    my_class_instance.pwet = 'value'
+    assert my_class_instance.pwet == 'value'
+    assert m.call_count == 1
+    assert isinstance(MyClass.pwet, utils.removable_property)

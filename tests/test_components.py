@@ -8,6 +8,7 @@ from tygs.components import AioHttpRequestHandlerAdapter
 from tygs.test_utils import AsyncMock, aiohttp_payload
 from tygs.http.server import (Router, HttpResponseController,
                               HttpRequestController)
+from tygs.exceptions import HttpResponseControllerError
 from tygs.app import App
 
 from aiohttp.multidict import CIMultiDict
@@ -114,6 +115,11 @@ def test_jinja2_renderer_render_to_response_dict(app):
                         'headers': {},
                         'body': 'Hey, I’m a body!'.encode()}
     render.assert_called_once_with('test_resp.html', None)
+
+    del resp.context['template_name']
+
+    with pytest.raises(HttpResponseControllerError):
+        resp.template_engine.render_to_response_dict(resp)
 
 
 @pytest.mark.asyncio
