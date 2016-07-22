@@ -133,17 +133,14 @@ async def test_request_body(queued_webapp):
     def index_controller(req, res):
         return res.text('')
 
-    try:
-        await app.async_ready()
-        response = await app.client.post('/',
-                                         params={'param': 'value'})
+    await app.async_ready()
+    response = await app.client.post('/',  params={'param': 'value'})
 
-        request = response.request
+    request = response.request
 
-        await request.load_body()
+    await request.load_body()
 
-        assert 'param' in request
-        assert 'fromage' not in request
+    assert 'param' in request
+    assert 'fromage' not in request
 
-    finally:
-        await app.async_stop()
+    await app.async_stop()

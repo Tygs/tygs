@@ -61,3 +61,21 @@ def test_get_handler_404(app, aiohttp_request):
         handler, arguments = aiorun(coro)
 
     assert e.value.code == 404
+
+
+@pytest.mark.asyncio
+async def test_queued_webapp_and_client(queued_webapp):
+
+    app = queued_webapp()
+    http = app.components['http']
+
+    @http.get('/')
+    def zero_error(req, res):
+        1 / 0
+
+    await app.async_ready()
+    response = await app.client.get('/')
+    assert response.status == 500
+    assert response.reason == 'Internal server error'
+    assert 'ZeroDivisionError: division by zero' in response._renderer_data
+    await app.async_stop()

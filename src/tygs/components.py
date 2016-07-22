@@ -1,5 +1,8 @@
 import asyncio
 
+import sys
+import traceback
+
 from functools import partial, wraps
 from textwrap import dedent
 
@@ -178,6 +181,24 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
         return tygs_request, handler
 
+    async def _call_request_handler(self, req, handler):
+
+        try:
+            await handler(req, req.response)
+        except Exception:
+            # TODO: provide a debug web page and disable this
+            # on prod
+            handler = self._router.get_error_handler(500)
+            resp = req.response
+            resp.status = 500
+            resp.reason = 'Internal server error'
+
+            tb = ''.join(traceback.format_exception(*sys.exc_info()))
+
+            resp.context['error_details'] = tb
+            # logging.error(e, exc_info=True)
+            await handler(req, resp)
+
     async def handle_request(self, message, payload):
         if self.access_log:
             now = self._loop.time()
@@ -200,17 +221,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         ############
 
         ###############
-        try:
-            await handler(tygs_request, tygs_request.response)
-        except Exception as e:
-            # TODO: provide a debug web page and disable this
-            # on prod
-            handler = self._router.get_error_handler(500)
-            resp = tygs_request.response
-            resp.status_code = 500
-            resp.reason = 'Internal server error'
-            resp.context['error_details'] = str(e)
-            await handler(tygs_request, resp)
+        await self._call_request_handler(tygs_request, handler)
 
         ###############
 
@@ -241,6 +252,7 @@ def aiohttp_request_handler_factory_adapter_factory(
         app, *, handler_adapter=AioHttpRequestHandlerAdapter):
 
     class AioHttpRequestHandlerFactoryAdapter(RequestHandlerFactory):
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self._handler = partial(handler_adapter, tygs_app=app)

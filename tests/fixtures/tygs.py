@@ -2,7 +2,6 @@
 
 import asyncio
 
-from textwrap import dedent
 from functools import partial
 
 from unittest.mock import MagicMock
@@ -16,7 +15,6 @@ from path import Path
 from tygs.webapp import WebApp
 from tygs.app import App
 from tygs.utils import HTTP_VERBS
-from tygs.exceptions import TestClientError
 from tygs.components import (
     AioHttpRequestHandlerAdapter,
     aiohttp_request_handler_factory_adapter_factory
@@ -49,15 +47,7 @@ def client():
 
                     await resp.text()
 
-            try:
-                return self.q.get_nowait()
-            except asyncio.queues.QueueEmpty:
-                raise TestClientError(dedent("""
-                    No request in the test client request queue. It probably
-                    means an exceptions occured before it could be placed
-                    in it it. Check the request handling code to see
-                    if an non handled exception hasn't occured here.
-                """))
+            return self.q.get_nowait()
 
     return TestClient
 

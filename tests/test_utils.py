@@ -98,3 +98,22 @@ def test_removable_property():
     assert my_class_instance.pwet == 'value'
     assert m.call_count == 1
     assert isinstance(MyClass.pwet, utils.removable_property)
+
+
+@pytest.mark.asyncio
+async def test_queued_webapp_and_client(queued_webapp):
+
+    app = queued_webapp()
+    http = app.components['http']
+
+    # TODO: when 2 handlers have the same name, we create an endpoint with
+    # the same name as well automatically, so it silently override each
+    # other. We should check for duplicates and raise an exception instead.
+    @http.get('/')
+    def index_controller(req, res):
+        return res.text('index_controller')
+
+    await app.async_ready()
+    response = await app.client.get('/')
+    assert response._renderer_data == 'index_controller'
+    await app.async_stop()
