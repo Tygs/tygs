@@ -1,15 +1,22 @@
-import pytest
-from functools import partial
+
+
 import asyncio
+
+from textwrap import dedent
+from functools import partial
 
 from unittest.mock import MagicMock
 
-from path import Path
 import aiohttp
+import pytest
+
+from path import Path
+
 
 from tygs.webapp import WebApp
 from tygs.app import App
 from tygs.utils import HTTP_VERBS
+from tygs.exceptions import TestClientError
 from tygs.components import (
     AioHttpRequestHandlerAdapter,
     aiohttp_request_handler_factory_adapter_factory
@@ -41,28 +48,45 @@ def client():
                                                     *args, **kwargs) as resp:
 
                     await resp.text()
-            return await self.q.get()
 
-    test_client = TestClient()
-    return test_client
+            try:
+                return self.q.get_nowait()
+            except asyncio.queues.QueueEmpty:
+                raise TestClientError(dedent("""
+                    No request in the test client request queue. It probably
+                    means an exceptions occured before it could be placed
+                    in it it. Check the request handling code to see
+                    if an non handled exception hasn't occured here.
+                """))
+
+    return TestClient
 
 
 @pytest.fixture
 def queued_webapp(client):
 
-    class TestHandlerAdapter(AioHttpRequestHandlerAdapter):
+    def _():
 
-        def _write_response_to_client(self, request, response):
-            asyncio.ensure_future(client.q.put(response))
-            return super()._write_response_to_client(request, response)
+        # TODO: sort out the priority of loop instanciation
+        # because right now pytest.mark.asyncio create a loop
+        # that is different from the one referrenced into the
+        # client queue and webapp
+        class TestHandlerAdapter(AioHttpRequestHandlerAdapter):
 
-    test_factory_adapter = partial(
-        aiohttp_request_handler_factory_adapter_factory,
-        handler_adapter=TestHandlerAdapter)
+            def _write_response_to_client(self, request, response):
+                asyncio.ensure_future(app.client.q.put(response))
+                return super()._write_response_to_client(request, response)
 
-    app = WebApp("namespace", factory_adapter=test_factory_adapter)
-    app.client = client
-    return app
+        test_factory_adapter = partial(
+            aiohttp_request_handler_factory_adapter_factory,
+            handler_adapter=TestHandlerAdapter)
+
+        app = WebApp("namespace", factory_adapter=test_factory_adapter)
+        app.client = client()
+
+        return app
+
+    return _
 
 
 @pytest.fixture

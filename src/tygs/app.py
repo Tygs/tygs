@@ -102,6 +102,9 @@ class App:
 
             """))
 
+        # Since we are handling the loop, we ensure to call stop if we
+        # receive a sigint or sigterm
+        # TODO: make that a separate method
         for signame in ('SIGINT', 'SIGTERM'):
             self.loop.add_signal_handler(getattr(signal, signame),
                                          self.stop)

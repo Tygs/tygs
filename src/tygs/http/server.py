@@ -1,4 +1,5 @@
 
+import re
 import asyncio
 
 from textwrap import dedent
@@ -9,7 +10,8 @@ from aiohttp.helpers import reify
 from werkzeug.routing import Map, Rule
 
 from tygs.exceptions import (HttpRequestControllerError,
-                             HttpResponseControllerError)
+                             HttpResponseControllerError,
+                             RoutingError)
 from tygs.utils import HTTP_VERBS, removable_property
 
 
@@ -32,10 +34,10 @@ def text_renderer(response):
 # message though
 def no_renderer(response):
     raise HttpResponseControllerError(dedent("""
-        No renderer set on "{!r}". Please set manually a renderer on it or
-        call one of the shortcut methods to do so (res.text(),
-        res.template(), res.json(), etc).
-    """.format(response)))
+        No renderer set by the handler "{!r}" that received the request "{!r}".
+        Please set manually a renderer or call one of the shortcut methods
+        to do so (res.text(), res.template(), res.json(), etc).
+    """.format(response.request.handler, response)))
 
 
 class HttpRequestController:
@@ -51,6 +53,8 @@ class HttpRequestController:
         self.subdomain = None  # TODO: figure out subdomain handling
         self.method = aiohttp_request.method
         self.response = HttpResponseController(self)
+
+        self.handler = None
 
         self.url_args = {}
         self.url_scheme = aiohttp_request.scheme
@@ -189,6 +193,18 @@ class HttpResponseController:
         return "<{} {} {!r} >".format(self.__class__.__name__,
                                       req.method, req.url_path)
 
+        return len(self.url_query) + len(self.body)
+
+    def __getattr__(self, name):
+
+        if name in ('status_code', 'code'):
+            raise HttpRequestControllerError(dedent("""
+                There is no "{0}" attribute. Use 'status'.
+            """.format(name)))
+
+        # Do not try super().__getattr__ since the parent doesn't define it.
+        raise object.__getattribute__(self, name)
+
     # TODO: allow template engine to be passed here as a parameter, but
     # also be retrieved from the app configuration. And remove it as an
     # attribute of the HttpResponseController.
@@ -224,8 +240,14 @@ class Router:
     def __init__(self):
         self.url_map = Map()
         self.handlers = {}
+        self.error_handlers = {
+            "5**": self.default_error_handler,
+            "4**": self.default_error_handler,
+        }
 
     # TODO: remplace args and kwargs with explicit parameters
+    # TODO: check if handler is a coroutine ?
+    # TODO: remove a route
     def add_route(self, url, endpoint, handler, methods=None, *args, **kwargs):
         rule = Rule(url, endpoint=endpoint, methods=methods, *args, **kwargs)
         self.handlers[endpoint] = handler
@@ -242,18 +264,37 @@ class Router:
             query_args=http_request.url_query
         )
 
-        # TODO: handle NotFound, MethodNotAllowed, RequestRedirect exceptions
+        # TODO:  MethodNotAllowed, RequestRedirect exceptions
         endpoint, arguments = map_adapter.match()
         return self.handlers[endpoint], arguments
 
-    def get_404_handler(self, exception):
+    async def default_error_handler(self, req, res):
+            return res.text(res.context['error_details'])
 
-        async def handle_404(req, res):
-            res.status = 404
-            res.reason = 'Not found'
-            res.text(exception)
+    def get_error_handler(self, code):
 
-        return handle_404
+        code = str(code)
+        try:
+            return self.error_handlers[code]
+        except KeyError:
+            return self.error_handlers[code[0] + '**']
+
+    # TODO: check if the status code exists in the HTTP spec and raise an
+    # exception if it doesn't
+    # TODO: check if handler is a coroutine ?
+    # TODO: remove a handler
+    def add_error_handler(self, code, handler):
+        code = str(code)
+        if not re.match(r'[45](\d\d|\*\*)', code):
+            raise RoutingError(dedent("""
+                The error code can only be a 400 or 500 HTTP status
+                code either as the exact value (404, 503, etc) or
+                in the form of a wild card (either 4** or 5**) to
+                match all 400 or 500 errors. Other values (5*1,
+                4444, 4xx, etc) are not allowed.
+            """))
+
+        self.error_handlers[code] = handler
 
 
 class Server:

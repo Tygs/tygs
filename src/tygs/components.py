@@ -94,8 +94,11 @@ class HttpComponent(Component):
     def __init__(self, app):
         super().__init__(app)
         self.router = Router()
+
+        # Create shortcut methods for HTTP verbs
         for meth in HTTP_VERBS:
             setattr(self, meth.lower(), partial(self.route, methods=[meth]))
+
         # TODO: figure out namespace cascading from the app tree architecture
 
     # TODO: use explicit arguments
@@ -106,7 +109,6 @@ class HttpComponent(Component):
 
             @wraps(func)
             async def handler_wrapper(req, res):
-                # if self.POST not in methods and not lazy_body:
                 if not lazy_body and req._aiohttp_request.has_body:
                     await req.load_body()
                 return await func(req, res)
@@ -115,6 +117,23 @@ class HttpComponent(Component):
             endpoint = "{}.{}".format(self.app.ns, func.__name__)
             self.router.add_route(url, endpoint, handler_wrapper,
                                   methods=methods)
+            return handler_wrapper
+        return decorator
+
+    def on_error(self, code, lazy_body=False):
+        def decorator(func):
+
+            func = ensure_coroutine(func)
+
+            @wraps(func)
+            async def handler_wrapper(req, res):
+
+                if not lazy_body and req._aiohttp_request.has_body:
+                    await req.load_body()
+                return await func(req, res)
+
+            # TODO: allow passing explicit endpoint
+            self.router.add_error_handler(code, handler_wrapper)
             return handler_wrapper
         return decorator
 
@@ -148,8 +167,15 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         try:
             handler, arguments = await self._router.get_handler(tygs_request)
             tygs_request.url_args.update(arguments)
-        except werkzeug.exceptions.NotFound as e:
-            handler = self._router.get_404_handler(e)
+        except werkzeug.exceptions.HTTPException as e:
+            handler = self._router.get_error_handler(e.code)
+            resp = tygs_request.response
+            resp.status = e.code
+            resp.reason = e.name
+            resp.context['error_details'] = e.description
+
+        tygs_request.handler = handler
+
         return tygs_request, handler
 
     async def handle_request(self, message, payload):
@@ -174,7 +200,18 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         ############
 
         ###############
-        await handler(tygs_request, tygs_request.response)
+        try:
+            await handler(tygs_request, tygs_request.response)
+        except Exception as e:
+            # TODO: provide a debug web page and disable this
+            # on prod
+            handler = self._router.get_error_handler(500)
+            resp = tygs_request.response
+            resp.status_code = 500
+            resp.reason = 'Internal server error'
+            resp.context['error_details'] = str(e)
+            await handler(tygs_request, resp)
+
         ###############
 
     # except HTTPException as exc:

@@ -10,3 +10,11 @@ class HttpRequestControllerError(TygsError):
 
 class HttpResponseControllerError(TygsError):
     pass
+
+
+class TestClientError(TygsError):
+    pass
+
+
+class RoutingError(TygsError):
+    pass

@@ -102,15 +102,17 @@ async def test_404(webapp):
 
 @pytest.mark.asyncio
 async def test_request_params(queued_webapp):
-    http = queued_webapp.components['http']
+
+    app = queued_webapp()
+    http = app.components['http']
 
     @http.get('/')
     def index_controller(req, res):
         return res.text('test')
 
-    await queued_webapp.async_ready()
+    await app.async_ready()
 
-    response = await queued_webapp.client.get('/', params={'param': 'value'})
+    response = await app.client.get('/', params={'param': 'value'})
     request = response.request
 
     assert 'param' in request
@@ -118,26 +120,30 @@ async def test_request_params(queued_webapp):
     with pytest.raises(HttpRequestControllerError):
         request.GET
 
-    await queued_webapp.async_stop()
+    await app.async_stop()
 
 
 @pytest.mark.asyncio
 async def test_request_body(queued_webapp):
-    http = queued_webapp.components['http']
 
-    @http.get('/')
+    app = queued_webapp()
+    http = app.components['http']
+
+    @http.post('/')
     def index_controller(req, res):
         return res.text('')
 
-    await queued_webapp.async_ready()
     try:
+        await app.async_ready()
+        response = await app.client.post('/',
+                                         params={'param': 'value'})
 
-        response = await queued_webapp.client.post('/',
-                                                   params={'param': 'value'})
         request = response.request
+
+        await request.load_body()
 
         assert 'param' in request
         assert 'fromage' not in request
 
     finally:
-        await queued_webapp.async_stop()
+        await app.async_stop()
