@@ -92,10 +92,10 @@ class HttpRequestController:
                 so check it out.
                 it out.
                 """)) from e
-        except KeyError:
-            pass
-
-        return super().__getitem__(name)
+        except KeyError as e:
+            raise HttpRequestControllerError(dedent("""
+                Item {!r} not found in the {!r} URL parameters nor the body.
+                """.format(name, self))) from e
 
     def __iter__(self):
         for x in self.url_query:
@@ -118,7 +118,7 @@ class HttpRequestController:
     def __contains__(self, name):
         return name in self.url_query or name in self.body
 
-    def __len__(self, name):
+    def __len__(self):
         return len(self.url_query) + len(self.body)
 
     def __getattr__(self, name):
@@ -140,7 +140,7 @@ class HttpRequestController:
             """.format(name)))
 
         # Do not try super().__getattr__ since the parent doesn't define it.
-        raise object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
 
     @reify
     def url_query(self):
@@ -193,12 +193,10 @@ class HttpResponseController:
         return "<{} {} {!r} >".format(self.__class__.__name__,
                                       req.method, req.url_path)
 
-        return len(self.url_query) + len(self.body)
-
     def __getattr__(self, name):
 
         if name in ('status_code', 'code'):
-            raise HttpRequestControllerError(dedent("""
+            raise HttpResponseControllerError(dedent("""
                 There is no "{0}" attribute. Use 'status'.
             """.format(name)))
 

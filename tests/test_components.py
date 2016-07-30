@@ -402,7 +402,6 @@ async def test_http_on_error_decorator(webapp):
 
     async def my_other_error_handler(req, res):
         pass
-    # manual decoration, we have to keep the initial function for testing
     http.on_error('404')(my_other_error_handler)
 
     assert router.add_error_handler.call_count == 2

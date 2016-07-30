@@ -6,7 +6,7 @@ from aiohttp.web_reqrep import Response
 
 from tygs.http import server
 from tygs.exceptions import (
-    HttpRequestControllerError, HttpResponseControllerError)
+    HttpRequestControllerError, HttpResponseControllerError, RoutingError)
 
 
 def test_httprequest_controller(app):
@@ -187,3 +187,92 @@ async def test_error_handler_with_lazy(queued_webapp):
 
     finally:
         await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_request_browse(queued_webapp):
+    try:
+        app = queued_webapp()
+        beacon = Mock()
+        http = app.components['http']
+
+        # @http.route('/', methods=['GET', 'POST'])
+        @http.post('/')
+        async def handler(req, res):
+            with pytest.raises(HttpRequestControllerError):
+                req['nope']
+            params = {}
+            for key, value in req.items():
+                params[key] = value
+            assert params == {'param': 'ok', 'data': 'yup'}
+
+            keys = []
+            for item in req:
+                keys.append(item)
+            assert keys == ['param', 'data']
+
+            values = []
+            for item in req.values():
+                values.append(item)
+            assert values == ['ok', 'yup']
+
+            assert 'param' in req
+
+            assert len(req) == 2
+
+            with pytest.raises(HttpRequestControllerError):
+                req.POST
+
+            with pytest.raises(AttributeError):
+                req.bleh
+
+            beacon()
+            return res.text('')
+
+        await app.async_ready()
+        await app.client.post('/', params={'param': 'ok'},
+                              data={'data': 'yup'})
+        assert beacon.call_count == 1
+
+    finally:
+        await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_response_browse(queued_webapp):
+    try:
+        app = queued_webapp()
+        beacon = Mock()
+        http = app.components['http']
+
+        # @http.route('/', methods=['GET', 'POST'])
+        @http.post('/')
+        async def handler(req, res):
+            with pytest.raises(HttpResponseControllerError):
+                res.status_code
+            with pytest.raises(HttpResponseControllerError):
+                res.code
+            with pytest.raises(AttributeError):
+                res.bleh
+
+            beacon()
+            return res.text('')
+
+        await app.async_ready()
+        await app.client.post('/', params={'param': 'ok'},
+                              data={'data': 'yup'})
+        assert beacon.call_count == 1
+
+    finally:
+        await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_invalid_error_handler(webapp):
+
+    http = webapp.components['http']
+
+    with pytest.raises(RoutingError):
+        @http.on_error('200')
+        async def not_error_handler(req, res):
+            return res.text('Everything is awesome!')  # noqa
