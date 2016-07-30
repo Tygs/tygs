@@ -383,3 +383,27 @@ async def test_requesthandleradapter_write_response_to_client(handleradapter,
     aiohttp_res.write_eof.assert_called_once_with()
     handleradapter.keep_alive.assert_called_once_with("wololo")
     resp_msg.keep_alive.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_http_on_error_decorator(webapp):
+
+    router = MagicMock()
+    http = webapp.components['http']
+    http.router = router
+
+    def my_error_handler(req, res):
+        pass
+    # manual decoration, we have to keep the initial function for testing
+    http.on_error('404')(my_error_handler)
+
+    assert router.add_error_handler.call_count == 1
+    assert '404' in router.add_error_handler.call_args[0]
+
+    async def my_other_error_handler(req, res):
+        pass
+    # manual decoration, we have to keep the initial function for testing
+    http.on_error('404')(my_other_error_handler)
+
+    assert router.add_error_handler.call_count == 2
+    assert '404' in router.add_error_handler.call_args[0]

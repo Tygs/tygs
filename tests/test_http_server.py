@@ -144,3 +144,46 @@ async def test_request_body(queued_webapp):
     assert 'fromage' not in request
 
     await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_error_handler(queued_webapp):
+    try:
+        app = queued_webapp()
+        beacon = Mock()
+        http = app.components['http']
+
+        @http.on_error('404')
+        async def handler_404(req, res):
+                assert req['payload'] == 'reblochon'
+                beacon()
+                return res.text('error')
+
+        await app.async_ready()
+        await app.client.post('/fromage', data={'payload': 'reblochon'})
+        assert beacon.call_count == 1
+
+    finally:
+        await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_error_handler_with_lazy(queued_webapp):
+    try:
+        app = queued_webapp()
+        beacon = Mock()
+        http = app.components['http']
+
+        @http.on_error('404', lazy_body=True)
+        async def handler_404(req, res):
+            beacon()
+            with pytest.raises(HttpRequestControllerError):
+                req['payload']
+            return res.text('error')
+
+        await app.async_ready()
+        await app.client.post('/fromage', data={'payload': 'reblochon'})
+        assert beacon.call_count == 1
+
+    finally:
+        await app.async_stop()
