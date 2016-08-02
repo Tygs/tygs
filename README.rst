@@ -17,7 +17,7 @@ Tygs wants to be a Pure Python Web framework providing a sweet API for :
 
 For now it's nothing, since the project just started. No promises.
 
-Depandancies:
+Dependencies:
 
 - Python 3.5.1+ (uses async/await);
 - aiohttp
@@ -53,9 +53,9 @@ Running all tests::
 
     python setup.py test
 
-This can take long has it will setup the whole test env with tox, a virtualenv, etc.
+This can take long as it will setup the whole test env with tox, a virtualenv, etc.
 
-You can install test dependancies manually::
+You can install test dependencies manually::
 
     pip install pytest-cov, mock, tox
 
@@ -66,7 +66,7 @@ And run the tests manually::
     # in only the current env
     py.test tests
 
-After that, you can run tests covergage this way::
+After that, you can run tests coverage this way::
 
     # cmd only coverage
     py.test --cov tygs tests
