@@ -31,7 +31,7 @@ def test_httpresponse_controller_init(app):
     request.app = app
     httpresponse = server.HttpResponseController(request)
     assert httpresponse.template_engine is None
-    assert httpresponse.status == 200
+    assert httpresponse.status_code == 200
     assert httpresponse.reason == 'OK'
     assert httpresponse.content_type == 'text/html'
     assert httpresponse.charset == 'utf-8'
@@ -267,7 +267,7 @@ async def test_response_browse(queued_webapp):
         @http.post('/')
         async def handler(req, res):
             with pytest.raises(HttpResponseControllerError):
-                res.status_code
+                res.status
             with pytest.raises(HttpResponseControllerError):
                 res.code
             with pytest.raises(AttributeError):

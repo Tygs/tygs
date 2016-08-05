@@ -19,11 +19,11 @@ from tygs.utils import HTTP_VERBS, removable_property
 def text_renderer(response):
     body = response._renderer_data.encode(response.charset)
 
-    return {'status': response.status,
+    return {'status': response.status_code,
             'reason': response.reason,
             'content_type': 'text/plain',
             'charset': response.charset,
-            # TODO: update default heaers
+            # TODO: update default headers
             'headers': response.headers,
             'body': body
             }
@@ -53,6 +53,9 @@ class HttpRequestController:
         self.subdomain = None  # TODO: figure out subdomain handling
         self.method = aiohttp_request.method
         self.response = HttpResponseController(self)
+
+        # TODO: check if we can improve the user experience with the multidict
+        # API (avoid the confusion of when getting multiple values, etc)
         self.headers = aiohttp_request.headers
 
         self.handler = None
@@ -67,7 +70,6 @@ class HttpRequestController:
         return "<{} {} {!r} >".format(self.__class__.__name__,
                                       self.method, self.url_path)
 
-    # TODO: headers
     # TODO: cookies
     # TODO: raw data (query string, path, etc)
 
@@ -187,7 +189,7 @@ class HttpResponseController:
         # TODO: create a status NameSpace with embeded reason and code
 
         # TODO: replace status by status_code
-        self.status = 200
+        self.status_code = 200
         self.content_type = "text/html"
         self.reason = "OK"
         self.charset = "utf-8"
@@ -200,9 +202,9 @@ class HttpResponseController:
 
     def __getattr__(self, name):
 
-        if name in ('status_code', 'code'):
+        if name in ('status', 'code'):
             raise HttpResponseControllerError(dedent("""
-                There is no "{0}" attribute. Use 'status'.
+                There is no "{0}" attribute. Use 'status_code'.
             """.format(name)))
 
         # Do not try super().__getattr__ since the parent doesn't define it.
@@ -277,8 +279,8 @@ class Router:
         # Here we don't know what the error is, a 500 or 400, so by default
         # we put a 500 and let the rest of the framework set the proper
         # code later on
-        if res.status == 200:
-            res.status = 500
+        if res.status_code == 200:
+            res.status_code = 500
         return res.text(res.context.get('error_details', 'Unknown Error'))
 
     async def get_error_handler(self, code):

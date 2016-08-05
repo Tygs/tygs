@@ -82,7 +82,7 @@ class Jinja2Renderer(Component):
         body = self.render_to_string(template_name, response._renderer_data)
         body = body.encode(response.charset)
 
-        return {'status': response.status,
+        return {'status': response.status_code,
                 'reason': response.reason,
                 'content_type': response.content_type,
                 'charset': response.charset,
@@ -173,7 +173,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         except werkzeug.exceptions.HTTPException as e:
             handler = await self._router.get_error_handler(e.code)
             resp = tygs_request.response
-            resp.status = e.code
+            resp.status_code = e.code
             resp.reason = e.name
             resp.context['error_details'] = e.description
 
@@ -190,7 +190,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             # on prod
             handler = await self._router.get_error_handler(500)
             resp = req.response
-            resp.status = 500
+            resp.status_code = 500
             resp.reason = 'Internal server error'
 
             tb = ''.join(traceback.format_exception(*sys.exc_info()))

@@ -86,7 +86,7 @@ async def test_queued_webapp_and_client(queued_webapp):
 
     await app.async_ready()
     response = await app.client.get('/')
-    assert response.status == 500
+    assert response.status_code == 500
     assert response.reason == 'Internal server error'
     assert 'ZeroDivisionError: division by zero' in response._renderer_data
     await app.async_stop()
