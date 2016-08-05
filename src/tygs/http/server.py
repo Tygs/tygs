@@ -314,6 +314,7 @@ class Server:
     def __init__(self, app):
         self.loop = asyncio.get_event_loop()
         self.app = app
+        raise ZeroDivisionError('My own error')
         self.handler = self.app._aiohttp_app.make_handler()
         self._server_factory = self.loop.create_server(self.handler, '0.0.0.0',
                                                        8080)

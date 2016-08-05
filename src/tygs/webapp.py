@@ -9,6 +9,7 @@ from .components import (HttpComponent,
 
 from .http.server import Server
 
+# TODO: create a dev mode with debug activated
 
 class WebApp(App):
 
@@ -32,5 +33,5 @@ class WebApp(App):
 
     @classmethod
     def quickstart(cls, ns):
-        app = WebApp(ns)
+        app = cls(ns)
         return app, app.components['http']

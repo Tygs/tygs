@@ -1,5 +1,6 @@
-from tygs import WebApp
+import asyncio
 
+from tygs import WebApp
 
 app, http = WebApp.quickstart('test')
 

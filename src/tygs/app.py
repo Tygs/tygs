@@ -1,5 +1,7 @@
 import signal
 import asyncio
+import weakref
+
 from textwrap import dedent
 
 from path import Path
@@ -18,16 +20,19 @@ class App:
         self.state = "pristine"
         self.main_future = None
         self.loop = asyncio.get_event_loop()
+        self.fail_fast_mode = False
 
     def fail_fast(self, on=False):
         if on:
             task_factory = DebugException.create_task_factory(self)
             self.loop.set_task_factory(task_factory)
+            self.fail_fast_mode = True
         else:
             if DebugException.fail_fast_mode:
                 self.loop.set_task_factory(DebugException.old_factory)
                 DebugException.old_factory = None
                 DebugException.fail_fast_mode = False
+            self.fail_fast_mode = False
 
     def on(self, event):
         return self.components['signals'].on(event)
@@ -55,25 +60,41 @@ class App:
         return await asyncio.gather(*futures)
 
     async def setup(self, cwd=None):
+
+        await self.change_state('setup')
+
         # Set project dir
         await self.setup_environnement(cwd)
-        # Tell all component to hook them self to the events they want to react
+        # Tell all components to hook them self to the events they want to react
         # to
+
         await self.setup_components()
 
         # TODO: create a namespace for the events. We will want more details
         # like project.init, project.ready, app_name.init, app_name.ready, etc.
         # TODO: allow to pass arguments in events.
         # TODO: allow synchronous events
+
         await self.change_state('init')
 
         await self.change_state('ready')
-        # Not awaiting so all callbacks from here are no blocking.
+
+        # Not awaiting so all callbacks from here are not blocking.
         return self.change_state('running')
 
     async def async_ready(self, cwd=None):
-        self.main_future = await asyncio.ensure_future(self.setup(cwd))
-        return self.main_future
+        task = asyncio.ensure_future(self.setup(cwd))
+
+        # Ensure we drain any exception raised during our setup that
+        # we didn't handle
+        def on_main_future_done(fut):
+            fut.exception()
+
+        task.add_done_callback(on_main_future_done)
+
+        self.main_future = weakref.ref(await task)
+
+        return task
 
     def ready(self, cwd=None, force_new_loop=False):
 
@@ -102,23 +123,29 @@ class App:
 
             """))
 
-        # Since we are handling the loop, we ensure to call stop if we
-        # receive a sigint or sigterm
-        # TODO: make that a separate method
-        for signame in ('SIGINT', 'SIGTERM'):
-            self.loop.add_signal_handler(getattr(signal, signame),
-                                         self.stop)
+        # TODO: create a new event loop policy to warn other dev about
+        # changing the event loop once it's set
+
+        self._add_signal_handlers(('SIGINT', 'SIGTERM'), self.stop)
 
         clean = False  # do not stop cleanly if the user made a mistake
         try:
             # Main loop, most of the work happens here
             self.main_future = asyncio.ensure_future(self.async_ready(cwd))
+
+            # Ensure we drain any exception raised during our setup that
+            # we didn't handle
+            def on_main_future_done(fut):
+                fut.exception()
+
+            self.main_future.add_done_callback(on_main_future_done)
+
             clean = True
             self.loop.run_forever()
 
         except DebugException as e:
             clean = False
-            raise e.from_exception
+            raise e.from_exception from None
 
         # On Ctrl+C, try a clean stop. Yes, we need it despite
         # add_signal_handler for an unknown reason.
@@ -140,18 +167,25 @@ class App:
         """
         Stops the loop, which will trigger a clean app stop later.
         """
-        if self.state == 'running':
-            self.state = 'stopping'
-            if self.loop.is_running():
-                # This stops the loop, and activate ready()'s finally which
-                # will enventually call self._stop().
-                self.loop.stop()
+
+        self.state = 'stopping'
+        if self.loop.is_running():
+            # This stops the loop, and activate ready()'s finally which
+            # will enventually call self._stop().
+            self.loop.stop()
 
     def break_loop_with_error(self, msg, exception=RuntimeError):
         # Silence other exception handlers, since we want to break
         # everything.
         with silence_loop_error_log(self.loop):
             raise DebugException(exception(msg))
+
+    def _add_signal_handlers(self, names, callback):
+        # Since we are handling the loop, we ensure to call stop if we
+        # receive a sigint or sigterm
+        for signame in names:
+            self.loop.add_signal_handler(getattr(signal, signame),
+                                         callback)
 
     def _finish(self):
 
@@ -166,4 +200,4 @@ class App:
 
             # TODO : should we really close the loop ?
             self.loop.close()
-            self.main_future.exception()
+

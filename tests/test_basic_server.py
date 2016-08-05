@@ -57,7 +57,6 @@ def start_server():
     def run(*args, **kwargs):  # noqa
         tygs.utils.aioloop()
         app, http = integration_app()
-
         app.ready(*args, **kwargs)
 
     path = Path(__file__).parent / 'fixtures'

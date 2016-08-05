@@ -39,7 +39,16 @@ class SignalDispatcher(Component):
     def trigger(self, event):
         handlers = self.signals.get(event, [])
         futures = (asyncio.ensure_future(handler()) for handler in handlers)
-        return asyncio.gather(*futures)
+        gathering_future = asyncio.gather(*futures)
+
+        # Ensure we drain any exception raised during our setup that
+        # we didn't handle
+        def on_main_future_done(fut):
+            fut.exception()
+
+        gathering_future.add_done_callback(on_main_future_done)
+
+        return gathering_future
 
     def on(self, event):
         def decorator(func):
