@@ -117,3 +117,15 @@ async def test_queued_webapp_and_client(queued_webapp):
     response = await app.client.get('/')
     assert response._renderer_data == 'index_controller'
     await app.async_stop()
+
+
+def test_aiorun():
+
+    beacon = Mock()
+
+    async def foo():
+        beacon()
+        return 1
+
+    assert utils.aiorun(foo) == 1
+    beacon.assert_called_once_with()

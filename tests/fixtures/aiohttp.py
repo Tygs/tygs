@@ -14,12 +14,18 @@ from aiohttp.protocol import RawRequestMessage
 
 @pytest.fixture
 def aiohttp_request():
-    def maker(method, path, headers=CIMultiDict(), *,
+
+    def maker(method, path, headers=None, *,
               version=HttpVersion(1, 1), closing=False,
               sslcontext=None,
               secure_proxy_ssl_header=None):
         if version < HttpVersion(1, 1):  # noqa
             closing = True
+
+        if headers is None:
+            headers = {}
+        headers = CIMultiDict(headers)
+
         app = mock.Mock()
         app._debug = False
         app.on_response_prepare = Signal(app)
@@ -46,10 +52,6 @@ def aiohttp_request():
         req = Request(app, message, payload,
                       transport, reader, writer,
                       secure_proxy_ssl_header=secure_proxy_ssl_header)
-
-        assert req.app is app
-        assert req.content is payload
-        assert req.transport is transport
 
         return req
     return maker

@@ -171,7 +171,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             handler, arguments = await self._router.get_handler(tygs_request)
             tygs_request.url_args.update(arguments)
         except werkzeug.exceptions.HTTPException as e:
-            handler = self._router.get_error_handler(e.code)
+            handler = await self._router.get_error_handler(e.code)
             resp = tygs_request.response
             resp.status = e.code
             resp.reason = e.name
@@ -188,7 +188,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         except Exception:
             # TODO: provide a debug web page and disable this
             # on prod
-            handler = self._router.get_error_handler(500)
+            handler = await self._router.get_error_handler(500)
             resp = req.response
             resp.status = 500
             resp.reason = 'Internal server error'

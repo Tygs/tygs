@@ -1,12 +1,12 @@
 
 import pytest
 
+from unittest.mock import Mock
+
 from tygs.http.server import Router, HttpRequestController
 
 from werkzeug.routing import Map
 from werkzeug.exceptions import NotFound
-
-from tygs.utils import aiorun
 
 
 def test_create_router():
@@ -31,21 +31,28 @@ def test_add_route():
     assert rule.rule == '/toto'
 
 
-def test_get_handler(app, aiohttp_request):
+@pytest.mark.asyncio
+async def test_get_handler(app, aiohttp_request):
     router = Router()
 
+    beacon = Mock()
+
     def toto():
-        pass
+        beacon()
 
     router.add_route('/toto', 'toto_url', toto)
 
     req = aiohttp_request('GET', "/toto")
     tygs_request = HttpRequestController(app, req)
+    # get_handler is asyncronous
     coro = router.get_handler(tygs_request)
-    handler, arguments = aiorun(coro)
+    handler, arguments = await coro
+    handler()
+    beacon.assert_called_once_with()
 
 
-def test_get_handler_404(app, aiohttp_request):
+@pytest.mark.asyncio
+async def test_get_handler_404(app, aiohttp_request):
     router = Router()
 
     def toto():
@@ -58,9 +65,13 @@ def test_get_handler_404(app, aiohttp_request):
     coro = router.get_handler(tygs_request)
 
     with pytest.raises(NotFound) as e:
-        handler, arguments = aiorun(coro)
+        handler, arguments = await coro
 
     assert e.value.code == 404
+
+    error_handler = await router.get_error_handler(404)
+    res = await error_handler(tygs_request, tygs_request.response)
+    assert res.render_response()['body'] == "Unknown Error".encode('utf8')
 
 
 @pytest.mark.asyncio

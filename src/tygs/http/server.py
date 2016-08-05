@@ -53,10 +53,13 @@ class HttpRequestController:
         self.subdomain = None  # TODO: figure out subdomain handling
         self.method = aiohttp_request.method
         self.response = HttpResponseController(self)
+        self.headers = aiohttp_request.headers
 
         self.handler = None
 
         self.url_args = {}
+        # TODO: self.url_params = {}
+        # self.url_query_args = {}
         self.url_scheme = aiohttp_request.scheme
         self.url_path = aiohttp_request.path
 
@@ -182,6 +185,8 @@ class HttpResponseController:
 
         # TODO : set reason automatically when you set status
         # TODO: create a status NameSpace with embeded reason and code
+
+        # TODO: replace status by status_code
         self.status = 200
         self.content_type = "text/html"
         self.reason = "OK"
@@ -225,6 +230,7 @@ class HttpResponseController:
     def text(self, message):
         self._renderer_data = str(message)
         self._renderer = text_renderer
+        return self
 
     def render_response(self):
         return self._renderer(self)
@@ -246,6 +252,7 @@ class Router:
     # TODO: remplace args and kwargs with explicit parameters
     # TODO: check if handler is a coroutine ?
     # TODO: remove a route
+    # TODO: add an async mechanisme to add routes and error handlers
     def add_route(self, url, endpoint, handler, methods=None, *args, **kwargs):
         rule = Rule(url, endpoint=endpoint, methods=methods, *args, **kwargs)
         self.handlers[endpoint] = handler
@@ -267,9 +274,14 @@ class Router:
         return self.handlers[endpoint], arguments
 
     async def default_error_handler(self, req, res):
-            return res.text(res.context['error_details'])
+        # Here we don't know what the error is, a 500 or 400, so by default
+        # we put a 500 and let the rest of the framework set the proper
+        # code later on
+        if res.status == 200:
+            res.status = 500
+        return res.text(res.context.get('error_details', 'Unknown Error'))
 
-    def get_error_handler(self, code):
+    async def get_error_handler(self, code):
 
         code = str(code)
         try:

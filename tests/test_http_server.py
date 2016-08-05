@@ -134,7 +134,7 @@ async def test_request_body(queued_webapp):
         return res.text('')
 
     await app.async_ready()
-    response = await app.client.post('/',  params={'param': 'value'})
+    response = await app.client.post('/', params={'param': 'value'})
 
     request = response.request
 
@@ -143,6 +143,24 @@ async def test_request_body(queued_webapp):
     assert 'param' in request
     assert 'fromage' not in request
 
+    await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_request_headers(queued_webapp):
+
+    app = queued_webapp()
+    http = app.components['http']
+
+    @http.post('/')
+    def index_controller(req, res):
+        return res.text('')
+
+    await app.async_ready()
+    response = await app.client.post('/', headers={'foo': 'bar'})
+
+    assert response.request.headers['foo'] == 'bar'
+    assert response.request.headers['content-length'] == '0'
     await app.async_stop()
 
 
