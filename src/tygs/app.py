@@ -65,8 +65,8 @@ class App:
 
         # Set project dir
         await self.setup_environnement(cwd)
-        # Tell all components to hook them self to the events they want to react
-        # to
+        # Tell all components to hook them self to the events they want to
+        # react to
 
         await self.setup_components()
 
@@ -200,4 +200,3 @@ class App:
 
             # TODO : should we really close the loop ?
             self.loop.close()
-
