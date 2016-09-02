@@ -147,6 +147,33 @@ async def test_request_body(queued_webapp):
 
 
 @pytest.mark.asyncio
+async def test_request_cookies(queued_webapp):
+
+    app = queued_webapp(cookies={'flavour': 'chocolate'})
+    http = app.components['http']
+
+    @http.get('/')
+    def index_controller(req, res):
+        return res.text('')
+
+    try:
+        await app.async_ready()
+        response = await app.client.get('/')
+
+        request = response.request
+
+        # await request.load_body()
+
+        assert 'flavour' in request
+        assert 'flavour' in request.cookies
+        assert request['flavour'] == 'chocolate'
+        assert request.cookies['flavour'] == 'chocolate'
+
+    finally:
+        await app.async_stop()
+
+
+@pytest.mark.asyncio
 async def test_request_headers(queued_webapp):
 
     app = queued_webapp()

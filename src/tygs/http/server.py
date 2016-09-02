@@ -58,6 +58,9 @@ class HttpRequestController:
         # API (avoid the confusion of when getting multiple values, etc)
         self.headers = aiohttp_request.headers
 
+        # aiohttp_request.cookies is also a Multidict
+        self.cookies = aiohttp_request.cookies
+
         self.handler = None
 
         self.url_args = {}
@@ -70,7 +73,6 @@ class HttpRequestController:
         return "<{} {} {!r} >".format(self.__class__.__name__,
                                       self.method, self.url_path)
 
-    # TODO: cookies
     # TODO: raw data (query string, path, etc)
 
     def __getitem__(self, name):
@@ -98,8 +100,14 @@ class HttpRequestController:
                 it out.
                 """)) from e
         except KeyError as e:
+            pass
+
+        try:
+            return self.cookies[name]
+        except KeyError as e:
             raise HttpRequestControllerError(dedent("""
-                Item {!r} not found in the {!r} URL parameters nor the body.
+                Item {!r} not found in the {!r} URL parameters nor the body or
+                the cookies.
                 """.format(name, self))) from e
 
     def __iter__(self):
@@ -107,11 +115,15 @@ class HttpRequestController:
             yield x
         for x in self.body:
             yield x
+        for x in self.cookies:
+            yield x
 
     def items(self):
         for x in self.url_query.items():
             yield x
         for x in self.body.items():
+            yield x
+        for x in self.cookies.items():
             yield x
 
     def values(self):
@@ -119,12 +131,15 @@ class HttpRequestController:
             yield x
         for x in self.body.values():
             yield x
+        for x in self.cookies.values():
+            yield x
 
     def __contains__(self, name):
-        return name in self.url_query or name in self.body
+        return name in self.url_query or name in self.body\
+            or name in self.cookies
 
     def __len__(self):
-        return len(self.url_query) + len(self.body)
+        return len(self.url_query) + len(self.body) + len(self.cookies)
 
     def __getattr__(self, name):
 
@@ -171,7 +186,6 @@ class HttpRequestController:
         return body
 
 
-# TODO: cookies
 # TODO: send log info about multidict values: the user should know if she tries
 # to access a single value from a multidict that has multiple values
 

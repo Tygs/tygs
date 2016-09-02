@@ -27,12 +27,16 @@ def webapp():
     return app
 
 
-@pytest.fixture
+@pytest.yield_fixture
 def client():
+
+    clients = []
 
     class TestClient():
 
-        def __init__(self, url='http://localhost:8080'):
+        def __init__(self, url='http://localhost:8080', cookies=None):
+            clients.append(self)
+            self.cookies = cookies or {}
             self.url = url
             self.q = asyncio.Queue()
 
@@ -40,22 +44,25 @@ def client():
                 setattr(self, meth.lower(),
                         partial(self.request, meth.lower()))
 
-        async def request(self, method, url, *args, **kwargs):
-            with aiohttp.ClientSession() as session:
-                async with getattr(session, method)(self.url + url,
-                                                    *args, **kwargs) as resp:
+            self.session = aiohttp.ClientSession(cookies=self.cookies)
 
-                    await resp.text()
+        async def request(self, method, url, *args, **kwargs):
+            async with getattr(self.session, method)(self.url + url,
+                                                     *args, **kwargs) as resp:
+                await resp.text()
 
             return self.q.get_nowait()
 
-    return TestClient
+    yield TestClient
+
+    for c in clients:
+        c.session.close()
 
 
 @pytest.fixture
 def queued_webapp(client):
 
-    def _():
+    def _(*args, **kwargs):
 
         # TODO: sort out the priority of loop instanciation
         # because right now pytest.mark.asyncio create a loop
@@ -72,7 +79,7 @@ def queued_webapp(client):
             handler_adapter=TestHandlerAdapter)
 
         app = WebApp("namespace", factory_adapter=test_factory_adapter)
-        app.client = client()
+        app.client = client(*args, **kwargs)
 
         return app
 

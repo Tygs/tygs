@@ -121,7 +121,7 @@ class HttpComponent(Component):
 
             @wraps(func)
             async def handler_wrapper(req, res):
-                if not lazy_body and req._aiohttp_request.has_body:
+                if not lazy_body:
                     await req.load_body()
                 return await func(req, res)
 
