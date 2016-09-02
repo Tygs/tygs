@@ -51,7 +51,10 @@ def client():
                                                      *args, **kwargs) as resp:
                 await resp.text()
 
-            return self.q.get_nowait()
+            try:
+                return self.q.get_nowait()
+            except asyncio.queues.QueueEmpty:
+                return None
 
     yield TestClient
 
@@ -79,6 +82,7 @@ def queued_webapp(client):
             handler_adapter=TestHandlerAdapter)
 
         app = WebApp("namespace", factory_adapter=test_factory_adapter)
+        app.fail_fast(kwargs.pop('fail_fast', True))
         app.client = client(*args, **kwargs)
 
         return app

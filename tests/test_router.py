@@ -76,17 +76,34 @@ async def test_get_handler_404(app, aiohttp_request):
 
 @pytest.mark.asyncio
 async def test_queued_webapp_and_client(queued_webapp):
+    try:
+        app = queued_webapp(fail_fast=False)
+        http = app.components['http']
 
-    app = queued_webapp()
-    http = app.components['http']
+        @http.get('/')
+        def zero_error(req, res):
+            1 / 0
 
-    @http.get('/')
-    def zero_error(req, res):
-        1 / 0
+        await app.async_ready()
+        response = await app.client.get('/')
+        assert response.status_code == 500
+        assert response.reason == 'Internal server error'
+        assert 'ZeroDivisionError: division by zero' in response._renderer_data
+    finally:
+        await app.async_stop()
 
-    await app.async_ready()
-    response = await app.client.get('/')
-    assert response.status_code == 500
-    assert response.reason == 'Internal server error'
-    assert 'ZeroDivisionError: division by zero' in response._renderer_data
-    await app.async_stop()
+
+@pytest.mark.asyncio
+async def test_fail_fast(queued_webapp):
+    try:
+        app = queued_webapp(fail_fast=True)  # default value, btw
+        http = app.components['http']
+
+        @http.get('/')
+        def zero_error(req, res):
+            1 / 0
+
+        await app.async_ready()
+        await app.client.get('/')
+    finally:
+        await app.async_stop()

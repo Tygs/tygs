@@ -49,6 +49,17 @@ def integration_app():  # noqa
     async def mixed(req, res):
         return res.template('index.html', {})
 
+    @http.get('/cookie')
+    async def cookie(req, res):
+        if 'test' in req.cookies and req.cookies['test'] == 'ping':
+            res.set_cookie('test', 'pong')
+        return res.template('index.html', {})
+
+    @http.get('/cookie2')
+    async def cookie2(req, res):
+        res.del_cookie('test')
+        return res.template('index.html', {})
+
     return app, http
 
 
@@ -108,3 +119,15 @@ def test_run_mixed(start_server):
 def test_basic_xss(start_server):
     req = requests.get('http://localhost:8080/get/<h1>test')
     assert b'Hello, &lt;h1&gt;test!' == req.content
+
+
+def test_cookies(start_server):
+    req = requests.get('http://localhost:8080/cookie',
+                       cookies={'test': 'ping'})
+    assert req.cookies['test'] == 'pong'
+
+
+def test_cookies_del(start_server):
+    req = requests.get('http://localhost:8080/cookie2',
+                       cookies={'test': 'ping'})
+    assert 'test' not in req.cookies

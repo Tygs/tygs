@@ -3,6 +3,7 @@ import re
 import asyncio
 
 from textwrap import dedent
+import http.cookies
 
 from aiohttp.web_reqrep import Response
 from aiohttp.helpers import reify
@@ -208,6 +209,7 @@ class HttpResponseController:
         self.reason = "OK"
         self.charset = "utf-8"
         self.headers = {}
+        self._cookies = http.cookies.SimpleCookie()
 
     def __repr__(self):
         req = self.request
@@ -223,6 +225,16 @@ class HttpResponseController:
 
         # Do not try super().__getattr__ since the parent doesn't define it.
         raise object.__getattribute__(self, name)
+
+    def set_cookie(self, *args, **kwargs):  # TODO: be a little less lazy
+        return Response.set_cookie(self, *args, **kwargs)
+
+    def del_cookie(self, *args, **kwargs):  # TODO: be a little less lazy
+        return Response.del_cookie(self, *args, **kwargs)
+
+    @property
+    def cookies(self):
+        return self._cookies
 
     # TODO: allow template engine to be passed here as a parameter, but
     # also be retrieved from the app configuration. And remove it as an
@@ -252,7 +264,9 @@ class HttpResponseController:
         return self._renderer(self)
 
     def _build_aiohttp_response(self):
-        return Response(**self.render_response())
+        resp = Response(**self.render_response())
+        resp._cookies = self._cookies
+        return resp
 
 
 class Router:

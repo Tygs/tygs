@@ -194,7 +194,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
         try:
             await handler(req, req.response)
-        except Exception:
+        except Exception as e:
             # TODO: provide a debug web page and disable this
             # on prod
             handler = await self._router.get_error_handler(500)
@@ -207,6 +207,11 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             resp.context['error_details'] = tb
             # logging.error(e, exc_info=True)
             await handler(req, resp)
+
+            # we still return the response because we have to (i.e. our tests
+            # depends on an HTTP response)
+            if self.tygs_app.fail_fast_mode:
+                raise e
 
     async def handle_request(self, message, payload):
         if self.access_log:
