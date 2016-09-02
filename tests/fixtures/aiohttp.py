@@ -2,9 +2,9 @@ from unittest import mock
 
 import pytest
 
+from multidict import CIMultiDict
 from aiohttp.signals import Signal
 from aiohttp.web import Request
-from aiohttp.multidict import CIMultiDict
 from aiohttp.protocol import HttpVersion
 from aiohttp.protocol import RawRequestMessage
 

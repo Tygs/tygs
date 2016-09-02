@@ -11,7 +11,7 @@ from tygs.http.server import (Router, HttpResponseController,
 from tygs.exceptions import HttpResponseControllerError
 from tygs.app import App
 
-from aiohttp.multidict import CIMultiDict
+from multidict import CIMultiDict
 from aiohttp.protocol import HttpVersion, RawRequestMessage
 
 
