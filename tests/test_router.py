@@ -93,17 +93,26 @@ async def test_queued_webapp_and_client(queued_webapp):
         await app.async_stop()
 
 
-@pytest.mark.asyncio
-async def test_fail_fast(queued_webapp):
-    try:
-        app = queued_webapp(fail_fast=True)  # default value, btw
-        http = app.components['http']
+def test_fail_fast(aioloop, queued_webapp):
 
-        @http.get('/')
-        def zero_error(req, res):
-            1 / 0
+        try:
+            app = queued_webapp(fail_fast=True)  # default value, btw
+            http = app.components['http']
 
-        await app.async_ready()
-        await app.client.get('/')
-    finally:
-        await app.async_stop()
+            @http.get('/')
+            def zero_error(req, res):
+                1 / 0
+
+
+            @app.on('ready')
+            async def after():
+                print('before get')
+                await app.client.get('/')
+                app.stop()
+
+            app.ready()
+
+
+
+        finally:
+            app.stop()

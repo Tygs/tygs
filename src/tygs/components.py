@@ -206,10 +206,20 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             # logging.error(e, exc_info=True)
             await handler(req, resp)
 
-            # we still return the response because we have to (i.e. our tests
-            # depends on an HTTP response)
-            if self.tygs_app.fail_fast_mode:
-                raise e
+            return e
+
+    async def handle_error(self, status=500, message=None,
+                     payload=None, exc=None, headers=None, reason=None):
+
+            # keep aiohttp behavior when the exception is
+            # errors.HttpProcessingError since it's part of the HTTP
+            # workflow
+            if headers is not None:
+                return await super().handle_error(status, message, payload, exc,
+                                                  headers, reason)
+
+            # else we do nothing and let it the behavior in
+            # _call_request_handler take precendence
 
     async def handle_request(self, message, payload):
         if self.access_log:
@@ -233,7 +243,7 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         ############
 
         ###############
-        await self._call_request_handler(tygs_request, handler)
+        exception = await self._call_request_handler(tygs_request, handler)
 
         ###############
 
@@ -242,6 +252,12 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
 
         response = tygs_request.response
         resp_msg = await self._write_response_to_client(tygs_request, response)
+
+        if exception is not None and self.tygs_app.fail_fast_mode:
+        # we still return the response because we have to (i.e. our tests
+        # depends on an HTTP response)
+            import ipdb; ipdb.set_trace()
+            raise exception
 
         # for repr
         self._meth = 'none'
