@@ -196,9 +196,32 @@ async def test_error_handler(queued_webapp):
 
         @http.on_error('404')
         async def handler_404(req, res):
+            await req.load_body()
+            assert req['payload'] == 'reblochon'
+            beacon()
+            return res.text('error')
+
+        await app.async_ready()
+        await app.client.post('/fromage', data={'payload': 'reblochon'})
+        assert beacon.call_count == 1
+
+    finally:
+        await app.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_error_handler_no_load_body(queued_webapp):
+    try:
+        app = queued_webapp()
+        beacon = Mock()
+        http = app.components['http']
+
+        @http.on_error('404')
+        async def handler_404(req, res):
+            with pytest.raises(HttpRequestControllerError):
                 assert req['payload'] == 'reblochon'
-                beacon()
-                return res.text('error')
+            beacon()
+            return res.text('error')
 
         await app.async_ready()
         await app.client.post('/fromage', data={'payload': 'reblochon'})
@@ -265,14 +288,15 @@ async def test_request_browse(queued_webapp):
             with pytest.raises(HttpRequestControllerError):
                 req['nope']
             params = {}
+
+            # calling lower() on keys because CIMultiDict's implementation of
+            # case insensitive keys call .title() on all the keys
             for key, value in req.items():
-                params[key] = value
+                params[key.lower()] = value
             assert params == {'param': 'ok', 'data': 'yup',
                               'flavour': 'chocolate'}
 
-            keys = []
-            for item in req:
-                keys.append(item)
+            keys = [key.lower() for key in req]
             assert keys == ['param', 'data', 'flavour']
 
             values = []
@@ -286,7 +310,7 @@ async def test_request_browse(queued_webapp):
             assert len(req) == 3
 
             with pytest.raises(HttpRequestControllerError):
-                req.POST
+                req.POST['flavour']
 
             with pytest.raises(AttributeError):
                 req.bleh

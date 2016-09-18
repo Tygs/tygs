@@ -75,3 +75,4 @@ htmlcov
 *.tmp
 *~
 
+*.sqlite

@@ -121,7 +121,7 @@ class HttpComponent(Component):
 
             @wraps(func)
             async def handler_wrapper(req, res):
-                if not lazy_body:
+                if req.expect_body and req.body.is_present and not lazy_body:
                     await req.load_body()
                 return await func(req, res)
 
@@ -133,15 +133,13 @@ class HttpComponent(Component):
         return decorator
 
     def on_error(self, code, lazy_body=False):
+
         def decorator(func):
 
             func = ensure_coroutine(func)
 
             @wraps(func)
             async def handler_wrapper(req, res):
-
-                if not lazy_body and req._aiohttp_request.has_body:
-                    await req.load_body()
                 return await func(req, res)
 
             # TODO: allow passing explicit endpoint
