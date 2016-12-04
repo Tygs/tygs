@@ -1,8 +1,8 @@
 requests>=2.8,<2.9
-aiohttp>=0.22
+aiohttp>=0.22,<1.0.0
 aiohttp-jinja2>=0.6
 jinja2>=2.8,<2.9
-multidict>=1.2.2,<=2.0.0
+multidict>=1.2.2,<2.0.0
 path.py>=8.1,<8.2
 Werkzeug>=0.11,<0.12
 pywin32 > 1.0 ; sys_platform == 'win32'
