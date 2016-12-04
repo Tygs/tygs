@@ -29,6 +29,7 @@ class WebApp(App):
     async def async_ready(self, cwd=None):
         self.http_server = self.server_class(self)
         self.register('ready', self.http_server.start)
+        self.register('stopping', self.http_server.stop)
         return await super().async_ready(cwd)
         # TODO: start the aiohttp server, for now
         # TODO: implement

@@ -12,7 +12,7 @@ from aiohttp.web_reqrep import Request
 from aiohttp.web import RequestHandlerFactory, RequestHandler
 import werkzeug
 
-from .utils import ensure_coroutine, HTTP_VERBS
+from .utils import ensure_coroutine, HTTP_VERBS, DebugException
 from .http.server import HttpRequestController, Router
 from .exceptions import HttpResponseControllerError
 
@@ -209,14 +209,14 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
             return e
 
     async def handle_error(self, status=500, message=None,
-                     payload=None, exc=None, headers=None, reason=None):
+                           payload=None, exc=None, headers=None, reason=None):
 
             # keep aiohttp behavior when the exception is
             # errors.HttpProcessingError since it's part of the HTTP
             # workflow
             if headers is not None:
-                return await super().handle_error(status, message, payload, exc,
-                                                  headers, reason)
+                return await super().handle_error(status, message, payload,
+                                                  exc, headers, reason)
 
             # else we do nothing and let it the behavior in
             # _call_request_handler take precendence
@@ -254,10 +254,10 @@ class AioHttpRequestHandlerAdapter(RequestHandler):
         resp_msg = await self._write_response_to_client(tygs_request, response)
 
         if exception is not None and self.tygs_app.fail_fast_mode:
-        # we still return the response because we have to (i.e. our tests
-        # depends on an HTTP response)
-            import ipdb; ipdb.set_trace()
-            raise exception
+            # we still return the response because we have to (i.e. our tests
+            # depends on an HTTP response)
+            # import pdb; pdb.set_trace()
+            raise DebugException(exception)
 
         # for repr
         self._meth = 'none'

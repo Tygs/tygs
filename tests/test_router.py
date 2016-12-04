@@ -94,25 +94,23 @@ async def test_queued_webapp_and_client(queued_webapp):
 
 
 def test_fail_fast(aioloop, queued_webapp):
+    try:
+        app = queued_webapp(fail_fast=True)  # default value, btw
+        http = app.components['http']
 
-        try:
-            app = queued_webapp(fail_fast=True)  # default value, btw
-            http = app.components['http']
+        @http.get('/')
+        def zero_error(req, res):
+            1 / 0
 
-            @http.get('/')
-            def zero_error(req, res):
-                1 / 0
+        @app.on('ready')
+        async def after():
+            await app.client.get('/')
+            app.stop()
 
-
-            @app.on('ready')
-            async def after():
-                print('before get')
-                await app.client.get('/')
-                app.stop()
-
+        with pytest.raises(ZeroDivisionError):
             app.ready()
 
-
-
-        finally:
-            app.stop()
+    finally:
+        app.stop()
+        while not app.loop._closed:
+            app.loop.close()

@@ -161,6 +161,7 @@ class App:
                 self._finish()
 
     async def async_stop(self):
+        await self.change_state('stopping')
         return await self.change_state('stop')
 
     def stop(self):
@@ -168,16 +169,27 @@ class App:
         Stops the loop, which will trigger a clean app stop later.
         """
 
-        self.state = 'stopping'
-        if self.loop.is_running():
+        def close_loop(*args, **kwargs):
             # This stops the loop, and activate ready()'s finally which
             # will enventually call self._stop().
             self.loop.stop()
+
+        if self.loop.is_running():
+            coro = self.change_state('stopping')
+            fut = asyncio.ensure_future(coro)
+            fut.add_done_callback(close_loop)
+        elif not self.loop.is_closed():
+            coro = self.change_state('stopping')
+            self.loop.run_until_complete(coro)
+        else:
+            self.state = 'stopping'
 
     def break_loop_with_error(self, msg, exception=RuntimeError):
         # Silence other exception handlers, since we want to break
         # everything.
         with silence_loop_error_log(self.loop):
+            if isinstance(msg, DebugException):
+                raise msg
             raise DebugException(exception(msg))
 
     def _add_signal_handlers(self, names, callback):

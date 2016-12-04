@@ -3,7 +3,6 @@ import re
 import asyncio
 
 from textwrap import dedent
-from functools import partial
 
 import http.cookies
 
@@ -16,7 +15,7 @@ from werkzeug.routing import Map, Rule
 from tygs.exceptions import (HttpRequestControllerError,
                              HttpResponseControllerError,
                              RoutingError)
-from tygs.utils import HTTP_VERBS, removable_property
+from tygs.utils import HTTP_VERBS
 
 
 # TODO: move this function and other renderers to a dedicated module
@@ -89,6 +88,7 @@ for method_name in ('__getitem__', '__iter__', 'items', 'keys', 'values',
     # the function
     def closure():
         name = method_name
+
         def method(self, *args, **kwargs):
             self.fail_on_body_no_loaded()
             return getattr(super(HttpBody, self), name)(*args, **kwargs)
@@ -150,8 +150,8 @@ class HttpRequestController:
             except HttpRequestControllerError as e:
                 raise HttpRequestControllerError(dedent("""
                     When you call HttpRequestController.__getitem__() (e.g:
-                    when you do req['something']), it implicitly tries to access
-                    HttpRequestController.body.
+                    when you do req['something']), it implicitly tries to
+                    access HttpRequestController.body.
 
                     If you see this error, it means you did it but you didn't
                     call HttpRequestController.load_body() before, which is
@@ -395,11 +395,13 @@ class Server:
                                                        8080)
 
     async def start(self):
-        self.server = await asyncio.ensure_future(self._server_factory)
+        self.aiohttp_server = await asyncio.ensure_future(self._server_factory)
         self.app.register('stop', self.stop)
 
     async def stop(self):
         await self.handler.finish_connections(1.0)
-        self.server.close()
-        await self.server.wait_closed()
+        if hasattr(self, 'aiohttp_server'):
+            # the HTTP server may have never started
+            self.aiohttp_server.close()
+            await self.aiohttp_server.wait_closed()
         await self.app._aiohttp_app.finish()
